@@ -1,0 +1,22 @@
+{
+  "name": "homeledger",
+  "version": "1.0.0",
+  "description": "HomeLedger Household Billing Manager",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "start": "npm run watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "axios": "^1.13.6",
+    "react-router-dom": "^7.13.1"
+  }
+}

@@ -1,0 +1,354 @@
+/* =========================
+   GLOBAL
+========================= */
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f5f6fa;
+  margin: 0;
+  padding: 24px;
+}
+
+.app {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* =========================
+   CARDS
+========================= */
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+
+/* =========================
+   FORM ELEMENTS
+========================= */
+
+form {
+  display: grid;
+  gap: 12px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+
+input,
+select {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+button {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+button:hover {
+  opacity: 0.95;
+}
+
+/* Action buttons */
+
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
+.actionBtn {
+  border: none;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.payBtn {
+  background: #22c55e;
+  color: white;
+}
+
+.editBtn {
+  background: #10b981;
+  color: white;
+}
+
+.deleteBtn {
+  background: #ef4444;
+  color: white;
+}
+
+.actionBtn:hover {
+  opacity: 0.85;
+}
+
+/* =========================
+   TABLE
+========================= */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  background: #fafafa;
+}
+
+/* =========================
+   DASHBOARD
+========================= */
+
+.dash {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+.dashItem {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fafafa;
+}
+
+.dashItem .label {
+  font-size: 12px;
+  color: #555;
+}
+
+.dashItem .value {
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 6px;
+}
+
+.dashItem.danger {
+  border-color: #ffd1d1;
+  background: #fff3f3;
+}
+
+/* =========================
+   BADGES
+========================= */
+
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid #ddd;
+}
+
+.badge.overdue {
+  border-color: #ffb3b3;
+  background: #fff0f0;
+}
+
+.badge.dueSoon {
+  border-color: #ffe08a;
+  background: #fff8e1;
+}
+
+.badge.paid {
+  border-color: #b8f3c7;
+  background: #effdf2;
+}
+
+/* =========================
+   ALERTS
+========================= */
+
+#alertsList {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+/* =========================
+   CHARTS
+========================= */
+
+#categoryChart {
+  width: 100%;
+  display: block;
+  max-width: 100%;
+  height: 220px;
+}
+
+.chartCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chartWrapper {
+  width: 100%;
+  max-width: 280px;
+  height: 280px;
+  position: relative;
+}
+
+.chartWrapper canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* =========================
+   TOP BAR
+========================= */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* =========================
+   UTILITY TRACKER GRID
+========================= */
+
+.gridUsage {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 12px;
+}
+
+@media(max-width:800px){
+  .gridUsage {
+    grid-template-columns:1fr;
+  }
+}
+
+/* =========================
+   DARK MODE
+========================= */
+
+body.dark {
+  background: #0b1220;
+  color: #e5e7eb;
+}
+
+body.dark .card {
+  background: #0f172a;
+  box-shadow: none;
+  border: 1px solid #1f2937;
+}
+
+body.dark input,
+body.dark select {
+  background: #0b1220;
+  color: #e5e7eb;
+  border-color: #334155;
+}
+
+body.dark table th,
+body.dark table td {
+  border-bottom: 1px solid #1f2937;
+}
+
+body.dark .dashItem {
+  background: #0b1220;
+  border-color: #1f2937;
+}
+
+body.dark .ghost {
+  color: #e5e7eb;
+  border-color: #334155;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 900px) {
+
+  .dash {
+    grid-template-columns: 1fr;
+  }
+
+  .topGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .chartWrapper {
+    max-width: 240px;
+    height: 240px;
+  }
+}
+
+/* ===== Recurring Row FIX (FINAL) ===== */
+.recurringRow{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-start;
+  gap:24px;
+  margin-top:6px;
+}
+
+/* checkbox side */
+.checkWrap{
+  display:flex !important;
+  align-items:center !important;
+  gap:10px;
+}
+
+/* stop global label grid from breaking these */
+.checkWrap label,
+.freqWrap label{
+  display:inline !important;
+  gap:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+}
+
+/* frequency side */
+.freqWrap{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:6px;
+  min-width:260px;
+}
+
+/* mobile */
+@media (max-width: 700px){
+  .recurringRow{
+    flex-direction:column !important;
+    align-items:stretch !important;
+  }
+  .freqWrap{ min-width: unset; }
+}

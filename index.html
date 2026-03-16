@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HomeLedger</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <h1>HomeLedger</h1>
+    <button id="themeToggle" type="button">Toggle Dark Mode</button>
+  </div>
+
+  <!-- Dashboard -->
+  <section class="card">
+    <h2>Monthly Summary</h2>
+
+    <div class="dash">
+      <div class="dashItem">
+        <div class="label">Total Bills (This Month)</div>
+        <div class="value" id="dTotalBills">—</div>
+      </div>
+      <div class="dashItem">
+        <div class="label">Total Paid</div>
+        <div class="value" id="dPaid">—</div>
+      </div>
+      <div class="dashItem">
+        <div class="label">Total Unpaid</div>
+        <div class="value" id="dUnpaid">—</div>
+      </div>
+      <div class="dashItem">
+        <div class="label">Due in Next 7 Days</div>
+        <div class="value" id="dUpcoming">—</div>
+      </div>
+      <div class="dashItem danger">
+        <div class="label">Overdue Bills</div>
+        <div class="value" id="dOverdueCount">—</div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:16px;">Alerts</h3>
+    <ul id="alertsList"></ul>
+  </section>
+
+  <!-- Add / Edit Bill -->
+  <section class="card">
+    <div class="row">
+      <h2 id="billFormTitle">Add Bill</h2>
+      <button id="cancelEditBtn" type="button" class="ghost" style="display:none;">Cancel Edit</button>
+    </div>
+
+    <form id="billForm">
+      <div class="grid">
+        <label>
+          Bill Name
+          <input id="billName" type="text" placeholder="Electricity" required />
+        </label>
+
+        <label>
+          Provider
+          <input id="billProvider" type="text" placeholder="Meralco" required />
+        </label>
+
+        <label>
+          Amount (PHP)
+          <input id="billAmount" type="number" min="0" step="0.01" required />
+        </label>
+
+        <label>
+          Due Date
+          <input id="billDueDate" type="date" required />
+        </label>
+
+        <label>
+          Category
+          <select id="billCategory" required>
+            <option value="utility">Utility</option>
+            <option value="rent">Rent</option>
+            <option value="subscription">Subscription</option>
+            <option value="loan">Loan</option>
+            <option value="insurance">Insurance</option>
+          </select>
+        </label>
+
+        <!-- Recurring + Frequency Row (WORKING) -->
+<div class="recurringRow">
+  <div class="checkWrap">
+    <input id="billRecurring" type="checkbox" />
+    <label for="billRecurring">Recurring Bill</label>
+  </div>
+
+  <div class="freqWrap">
+    <label for="billFrequency">Frequency</label>
+    <select id="billFrequency">
+      <option value="monthly">Monthly</option>
+      <option value="quarterly">Quarterly</option>
+    </select>
+  </div>
+</div>
+
+      <button id="billSubmitBtn" type="submit">Save Bill</button>
+    </form>
+  </section>
+
+  <!-- Bills -->
+  <section class="card">
+    <h2>Bill List</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Bill</th>
+          <th>Provider</th>
+          <th>Due Date</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Recurring</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="billTableBody"></tbody>
+    </table>
+  </section>
+
+  <!-- Charts -->
+  <section class="card">
+    <h2>Spending Breakdown (By Category)</h2>
+    <canvas id="categoryChart"></canvas>
+  </section>
+
+  <!-- Utility Usage -->
+  <section class="card">
+    <h2>Utility Consumption Tracker</h2>
+
+    <form id="usageForm">
+  <div class="gridUsage">
+        <label>
+          Utility Bill
+          <select id="usageBillSelect"></select>
+        </label>
+
+        <label>
+          Month (YYYY-MM)
+          <input id="usageMonth" type="month" required />
+        </label>
+
+        <label>
+          Usage Value
+          <input id="usageValue" type="number" min="0" step="0.01" required />
+        </label>
+
+        <label>
+          Unit
+          <input id="usageUnit" type="text" placeholder="kWh / m³" required />
+        </label>
+      </div>
+
+      <button type="submit">Save Usage</button>
+    </form>
+
+    <div style="margin-top:12px;">
+      <canvas id="usageChart"></canvas>
+    </div>
+  </section>
+
+  <!-- Payment History -->
+  <section class="card">
+    <h2>Payment History</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Bill</th>
+          <th>Payment Date</th>
+          <th>Late Fee</th>
+          <th>Total Paid</th>
+        </tr>
+      </thead>
+      <tbody id="paymentTableBody"></tbody>
+    </table>
+  </section>
+
+  <!-- Exports -->
+  <section class="card">
+    <h2>Export Reports (CSV)</h2>
+    <div class="row">
+      <button id="exportBillsBtn" type="button">Export Bills CSV</button>
+      <button id="exportPaymentsBtn" type="button">Export Payments CSV</button>
+      <button id="exportUsageBtn" type="button">Export Utility Usage CSV</button>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="module" src="./dist/app.js"></script>
+
+</body>
+</html>
