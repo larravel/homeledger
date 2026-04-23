@@ -12,21 +12,38 @@ import {
 export class CreateBillDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 
   @IsString()
   @IsNotEmpty()
-  provider: string;
+  provider!: string;
 
   @IsNumber()
   @IsPositive()
-  amount: number;
+  amount!: number;
 
   @IsDateString()
-  dueDate: string;
+  dueDate!: string;
 
-  @IsIn(['utility', 'rent', 'subscription', 'loan', 'insurance'])
-  category: 'utility' | 'rent' | 'subscription' | 'loan' | 'insurance';
+  @IsIn([
+    'utility',
+    'rent',
+    'subscription',
+    'loan',
+    'insurance',
+    'transportation',
+    'healthcare',
+    'education',
+  ])
+  category!:
+    | 'utility'
+    | 'rent'
+    | 'subscription'
+    | 'loan'
+    | 'insurance'
+    | 'transportation'
+    | 'healthcare'
+    | 'education';
 
   @IsOptional()
   @IsBoolean()

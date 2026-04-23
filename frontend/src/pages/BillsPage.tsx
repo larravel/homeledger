@@ -1,300 +1,744 @@
-import { useEffect, useState } from 'react';
-import AppLayout from '../layouts/AppLayout';
-import api from '../services/api';
+import { useEffect, useState, useMemo } from 'react'
+import AppLayout from '../layouts/AppLayout'
+import api from '../services/api'
+import { formatCurrency } from '../utils/format'
 
 interface Bill {
-  id: number;
-  name: string;
-  provider: string;
-  amount: number;
-  dueDate: string;
-  status: string;
-  category: string;
-  isRecurring: boolean;
-  frequency: string | null;
+  id: number
+  name: string
+  provider: string
+  amount: number
+  dueDate: string
+  status: string
+  category: string
+  isRecurring: boolean
+  frequency: string | null
 }
 
-const initialForm = {
-  name: '',
-  provider: '',
-  amount: '',
-  dueDate: '',
-  category: 'utility',
-  isRecurring: false,
-  frequency: 'monthly',
-};
+const CATEGORY_ICONS: Record<string, string> = {
+  utility: '⚡',
+  rent: '🏠',
+  subscription: '📱',
+  loan: '💳',
+  insurance: '🛡️',
+  transportation: '🚗',
+  healthcare: '🏥',
+  education: '🎓'
+}
+
+const CATEGORIES = [
+  { value: 'utility', label: 'Utilities', icon: '⚡' },
+  { value: 'rent', label: 'Rent/Mortgage', icon: '🏠' },
+  { value: 'subscription', label: 'Subscriptions', icon: '📱' },
+  { value: 'loan', label: 'Loans', icon: '💳' },
+  { value: 'insurance', label: 'Insurance', icon: '🛡️' },
+  { value: 'transportation', label: 'Transportation', icon: '🚗' },
+  { value: 'healthcare', label: 'Healthcare', icon: '🏥' },
+  { value: 'education', label: 'Education', icon: '🎓' }
+]
 
 export default function BillsPage() {
-  const [bills, setBills] = useState<Bill[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [bills, setBills] = useState<Bill[]>([])
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [filterCategory, setFilterCategory] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterDateRange, setFilterDateRange] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [customDateFrom, setCustomDateFrom] = useState('')
+  const [customDateTo, setCustomDateTo] = useState('')
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState({
+    name: '',
+    provider: '',
+    amount: '',
+    dueDate: '',
+    category: ''
+  })
 
-  async function fetchBills() {
+  // ✅ FIX: supports different API response shapes + error handling
+  const fetchData = async () => {
+    setLoading(true)
     try {
-      const res = await api.get('/bills');
-      setBills(res.data);
-    } catch (error) {
-      console.error('FETCH BILLS ERROR:', error);
-      alert('Failed to load bills');
+      const response = await api.get('/bills')
+
+      const data = Array.isArray(response.data)
+        ? response.data
+        : response.data?.data || []
+
+      setBills(data)
+    } catch (err) {
+      console.error('Fetch bills error:', err)
+      setBills([])
+    } finally {
+      setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchBills();
-  }, []);
+    fetchData()
+  }, [])
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
+  // ✅ FIX: proper typing
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  const isValid = form.name && form.provider && Number(form.amount) > 0 && form.dueDate
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!isValid) return
+
+    setSubmitting(true)
 
     try {
-      const payload = {
-        name: form.name,
-        provider: form.provider,
+      await api.post('/bills', {
+        name: form.name.trim(),
+        provider: form.provider.trim(),
         amount: Number(form.amount),
         dueDate: form.dueDate,
         category: form.category,
-        isRecurring: form.isRecurring,
-        frequency: form.isRecurring ? form.frequency : undefined,
-      };
+        isRecurring: false
+      })
 
-      if (editingId) {
-        await api.patch(`/bills/${editingId}`, payload);
-        alert('Bill updated successfully');
-      } else {
-        await api.post('/bills', payload);
-        alert('Bill added successfully');
-      }
-
-      setForm(initialForm);
-      setEditingId(null);
-      await fetchBills();
-    } catch (error: any) {
-      console.error('SAVE BILL ERROR:', error);
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        'Failed to save bill';
-      alert(message);
+      setForm({ name: '', provider: '', amount: '', dueDate: '', category: '' })
+      await fetchData()
+    } catch (err) {
+      console.error('Save bill error:', err)
     } finally {
-      setLoading(false);
+      setSubmitting(false)
     }
   }
 
-  function startEdit(bill: Bill) {
-    setEditingId(bill.id);
-    setForm({
-      name: bill.name,
-      provider: bill.provider,
-      amount: String(bill.amount),
-      dueDate: bill.dueDate,
-      category: bill.category,
-      isRecurring: bill.isRecurring,
-      frequency: bill.frequency ?? 'monthly',
-    });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this bill?')) return
 
-  async function handleDelete(id: number) {
-    const confirmed = window.confirm('Delete this bill?');
-    if (!confirmed) return;
-
+    setDeletingId(id)
     try {
-      await api.delete(`/bills/${id}`);
-      alert('Bill deleted successfully');
-
-      if (editingId === id) {
-        setEditingId(null);
-        setForm(initialForm);
-      }
-
-      await fetchBills();
-    } catch (error) {
-      console.error('DELETE BILL ERROR:', error);
-      alert('Failed to delete bill');
+      await api.delete(`/bills/${id}`)
+      await fetchData()
+    } catch (err) {
+      console.error('Delete error:', err)
+    } finally {
+      setDeletingId(null)
     }
   }
 
-  async function handlePay(bill: Bill) {
-    const paymentDate = window.prompt('Enter payment date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
-    if (!paymentDate) return;
-
+  const handlePay = async (bill: Bill) => {
     try {
       await api.post(`/payments/bill/${bill.id}`, {
-        paymentDate,
-      });
+        paymentDate: new Date().toISOString().split('T')[0],
+      })
+      await fetchData()
+    } catch (err) {
+      console.error('Pay bill error:', err)
+    }
+  }
 
-      alert('Payment recorded successfully');
-      await fetchBills();
-    } catch (error: any) {
-      console.error('PAY BILL ERROR:', error);
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        'Failed to pay bill';
-      alert(message);
+  // Helper functions for filtering
+  const getBillStatus = (bill: Bill) => {
+    if (bill.status === 'paid') return 'paid'
+    
+    const today = new Date()
+    const due = new Date(bill.dueDate)
+    const diff = (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    
+    if (due < today) return 'overdue'
+    if (diff <= 7 && diff >= 0) return 'dueSoon'
+    return 'unpaid'
+  }
+
+  const isDateInRange = (dateString: string, range: string, from?: string, to?: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    
+    switch (range) {
+      case 'thisMonth':
+        return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
+      case 'lastMonth': {
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1)
+        return date.getMonth() === lastMonth.getMonth() && date.getFullYear() === lastMonth.getFullYear()
+      }
+      case 'custom': {
+        if (!from || !to) return true
+        const fromDate = new Date(from)
+        const toDate = new Date(to)
+        return date >= fromDate && date <= toDate
+      }
+      default:
+        return true
+    }
+  }
+
+  const filteredBills = useMemo(() => {
+    return bills.filter(bill => {
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const matchesSearch = 
+          bill.name.toLowerCase().includes(query) || 
+          bill.provider.toLowerCase().includes(query)
+        if (!matchesSearch) return false
+      }
+
+      // Category filter
+      if (filterCategory && bill.category !== filterCategory) {
+        return false
+      }
+
+      // Status filter
+      if (filterStatus) {
+        const billStatus = getBillStatus(bill)
+        if (billStatus !== filterStatus) return false
+      }
+
+      // Date range filter
+      if (filterDateRange && !isDateInRange(bill.dueDate, filterDateRange, customDateFrom, customDateTo)) {
+        return false
+      }
+
+      return true
+    })
+  }, [bills, searchQuery, filterCategory, filterStatus, filterDateRange, customDateFrom, customDateTo])
+
+  const totalBills = filteredBills.length
+
+  const totalAmount = useMemo(
+    () => filteredBills.reduce((sum, b) => sum + (Number(b.amount) || 0), 0),
+    [filteredBills]
+  )
+
+  const unpaidAmount = useMemo(
+    () => filteredBills.filter(b => b.status !== 'paid').reduce((sum, b) => sum + (Number(b.amount) || 0), 0),
+    [filteredBills]
+  )
+
+  const overdueCount = useMemo(
+    () => filteredBills.filter(b => b.status !== 'paid' && new Date(b.dueDate) < new Date()).length,
+    [filteredBills]
+  )
+
+  const dueSoonCount = useMemo(
+    () => {
+      const today = new Date()
+      return filteredBills.filter(b => {
+        if (b.status === 'paid') return false
+        const due = new Date(b.dueDate)
+        const diff = (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+        return diff <= 7 && diff >= 0
+      }).length
+    },
+    [filteredBills]
+  )
+
+  const categoryBreakdown = useMemo(() => {
+    const breakdown: Record<string, number> = {}
+
+    filteredBills.forEach(b => {
+      const amount = Number(b.amount) || 0
+      breakdown[b.category] = (breakdown[b.category] || 0) + amount
+    })
+
+    return Object.entries(breakdown)
+      .map(([category, amount]) => ({ category, amount }))
+      .sort((a, b) => b.amount - a.amount)
+  }, [filteredBills])
+
+  // ✅ FIX: prevents "Invalid Date"
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '-'
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return '-'
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  const getStatusBadge = (bill: Bill) => {
+    const status = getBillStatus(bill)
+    switch (status) {
+      case 'paid': return { text: 'Paid', class: 'paid' }
+      case 'overdue': return { text: 'Overdue', class: 'overdue' }
+      case 'dueSoon': return { text: 'Due Soon', class: 'dueSoon' }
+      default: return { text: 'Unpaid', class: 'unpaid' }
     }
   }
 
   return (
-    <AppLayout title="Bills">
-      <div className="content-grid bills-layout">
-        <section className="panel">
-          <h2>{editingId ? 'Edit Bill' : 'Add Bill'}</h2>
+    <AppLayout>
+      <div className="page-container">
+    
+        {/* HEADER */}
+        <div className="page-header">
+          <div>
+            <h1>Household Bills</h1>
+            <p className="muted">Track and manage all your household bills and financial obligations</p>
+          </div>
+        </div>
 
-          <form className="bill-form" onSubmit={handleSubmit}>
-            <input
-              className="input"
-              placeholder="Bill name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
+        {/* SUMMARY CARDS */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: 16,
+          marginBottom: 24
+        }}>
+          <div className="panel">
+            <h4 style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
+              Total Bills
+            </h4>
+            <p style={{ margin: '4px 0 0 0', fontSize: '1.8rem', fontWeight: 600 }}>
+              {totalBills}
+            </p>
+          </div>
 
-            <input
-              className="input"
-              placeholder="Provider"
-              value={form.provider}
-              onChange={(e) => setForm({ ...form, provider: e.target.value })}
-            />
+          <div className="panel">
+            <h4 style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
+              Total Amount
+            </h4>
+            <p style={{ margin: '4px 0 0 0', fontSize: '1.8rem', fontWeight: 600 }}>
+              {formatCurrency(totalAmount || 0)}
+            </p>
+          </div>
 
-            <input
-              className="input"
-              type="number"
-              placeholder="Amount"
-              value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
-            />
+          <div className="panel">
+            <h4 style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
+              Unpaid Amount
+            </h4>
+            <p style={{ margin: '4px 0 0 0', fontSize: '1.8rem', fontWeight: 600 }}>
+              {formatCurrency(unpaidAmount || 0)}
+            </p>
+          </div>
 
-            <input
-              className="input"
-              type="date"
-              value={form.dueDate}
-              onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-            />
+          <div className="panel">
+            <h4 style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
+              Overdue Bills
+            </h4>
+            <p style={{ margin: '4px 0 0 0', fontSize: '1.8rem', fontWeight: 600 }}>
+              {overdueCount}
+            </p>
+          </div>
+        </div>
 
-            <select
-              className="input"
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-            >
-              <option value="utility">Utility</option>
-              <option value="rent">Rent</option>
-              <option value="subscription">Subscription</option>
-              <option value="loan">Loan</option>
-              <option value="insurance">Insurance</option>
-            </select>
+        {/* DUE SOON ALERT */}
+        {dueSoonCount > 0 && (
+          <div className="panel" style={{ 
+            marginBottom: 24, 
+            border: '1px solid #facc15', 
+            background: '#fefce822' 
+          }}>
+            <h3 style={{ marginBottom: 8, color: '#facc15' }}>⚠️ Bills Due Soon</h3>
+            <p>You have {dueSoonCount} bill(s) due within the next 7 days. Don't forget to pay them on time!</p>
+          </div>
+        )}
 
-            <label className="checkbox-row">
+        {/* CATEGORY BREAKDOWN */}
+        {categoryBreakdown.length > 0 && (
+          <div className="panel" style={{ marginBottom: 24 }}>
+            <h3 style={{ marginBottom: 16 }}>Bills by Category</h3>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: 12
+            }}>
+              {categoryBreakdown.slice(0, 6).map(({ category, amount }) => (
+                <div key={category} style={{
+                  padding: 12,
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 8,
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '1.5rem', marginBottom: 4 }}>
+                    {CATEGORY_ICONS[category] || '📦'}
+                  </div>
+                  <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
+                    {CATEGORIES.find(c => c.value === category)?.label || category}
+                  </div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                    {formatCurrency(amount)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ADD BILL FORM */}
+        <div className="panel" style={{ marginBottom: 24 }}>
+          <h3 style={{ marginBottom: 16 }}>Add New Bill</h3>
+
+          <form
+            onSubmit={handleSubmit}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: 16,
+              alignItems: 'end'
+            }}
+          >
+            <div>
+              <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                Bill Name *
+              </label>
               <input
-                type="checkbox"
-                checked={form.isRecurring}
-                onChange={(e) => setForm({ ...form, isRecurring: e.target.checked })}
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="e.g., Electricity Bill"
+                required
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 4, border: '1px solid #d1d5db' }}
               />
-              <span>Recurring Bill</span>
-            </label>
+            </div>
 
-            {form.isRecurring && (
+            <div>
+              <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                Provider *
+              </label>
+              <input
+                type="text"
+                name="provider"
+                value={form.provider}
+                onChange={handleChange}
+                placeholder="e.g., ConEd, Verizon"
+                required
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 4, border: '1px solid #d1d5db' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                Category *
+              </label>
               <select
-                className="input"
-                value={form.frequency}
-                onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+                name="category"
+                value={form.category}
+                onChange={handleChange}
+                required
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 4, border: '1px solid #d1d5db' }}
               >
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
+                <option value="">Select Category</option>
+                {CATEGORIES.map(cat => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.icon} {cat.label}
+                  </option>
+                ))}
               </select>
-            )}
+            </div>
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="primary-btn" type="submit" disabled={loading}>
-                {loading ? 'Saving...' : editingId ? 'Update Bill' : 'Save Bill'}
+            <div>
+              <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                Due Date *
+              </label>
+              <input
+                type="date"
+                name="dueDate"
+                value={form.dueDate}
+                onChange={handleChange}
+                required
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 4, border: '1px solid #d1d5db' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                Amount *
+              </label>
+              <input
+                type="number"
+                name="amount"
+                value={form.amount}
+                onChange={handleChange}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                required
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 4, border: '1px solid #d1d5db' }}
+              />
+            </div>
+
+            <div>
+              <button
+                className="primary-btn"
+                type="submit"
+                disabled={!isValid || submitting}
+                style={{ width: '100%', padding: '10px' }}
+              >
+                {submitting ? 'Saving...' : '💾 Save Bill'}
               </button>
-
-              {editingId && (
-                <button
-                  type="button"
-                  className="secondary-btn"
-                  onClick={() => {
-                    setEditingId(null);
-                    setForm(initialForm);
-                  }}
-                >
-                  Cancel
-                </button>
-              )}
             </div>
           </form>
-        </section>
+        </div>
 
-        <section className="panel">
-          <h2>My Bills</h2>
+        {/* BILL HISTORY */}
+        <div className="panel">
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 16,
+            marginBottom: 20
+          }}>
+            <div>
+              <h3 style={{ margin: 0 }}>Bill History</h3>
+              <p style={{ margin: '6px 0 0 0', color: '#6b7280', fontSize: '0.9rem' }}>
+                Showing {filteredBills.length} bill{filteredBills.length === 1 ? '' : 's'}
+              </p>
+            </div>
 
-          {bills.length === 0 ? (
-            <p>No bills yet.</p>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'end', flexWrap: 'wrap' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
+                  Search
+                </label>
+                <input
+                  type="text"
+                  placeholder="Bill name or provider..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: 4,
+                    border: '1px solid #d1d5db',
+                    fontSize: '0.9rem',
+                    minWidth: 200
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
+                  Category
+                </label>
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: 4,
+                    border: '1px solid #d1d5db',
+                    fontSize: '0.9rem',
+                    minWidth: 160
+                  }}
+                >
+                  <option value="">All Categories</option>
+                  {CATEGORIES.map(cat => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
+                  Status
+                </label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: 4,
+                    border: '1px solid #d1d5db',
+                    fontSize: '0.9rem',
+                    minWidth: 140
+                  }}
+                >
+                  <option value="">All Status</option>
+                  <option value="paid">Paid</option>
+                  <option value="unpaid">Unpaid</option>
+                  <option value="dueSoon">Due Soon</option>
+                  <option value="overdue">Overdue</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
+                  Date Range
+                </label>
+                <select
+                  value={filterDateRange}
+                  onChange={(e) => setFilterDateRange(e.target.value)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: 4,
+                    border: '1px solid #d1d5db',
+                    fontSize: '0.9rem',
+                    minWidth: 140
+                  }}
+                >
+                  <option value="">All Dates</option>
+                  <option value="thisMonth">This Month</option>
+                  <option value="lastMonth">Last Month</option>
+                  <option value="custom">Custom Range</option>
+                </select>
+              </div>
+
+              {filterDateRange === 'custom' && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
+                      From
+                    </label>
+                    <input
+                      type="date"
+                      value={customDateFrom}
+                      onChange={(e) => setCustomDateFrom(e.target.value)}
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: 4,
+                        border: '1px solid #d1d5db',
+                        fontSize: '0.9rem'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
+                      To
+                    </label>
+                    <input
+                      type="date"
+                      value={customDateTo}
+                      onChange={(e) => setCustomDateTo(e.target.value)}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        border: '1px solid #d1d5db',
+                        fontSize: '0.9rem'
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+
+              <button
+                onClick={() => {
+                  setSearchQuery('')
+                  setFilterCategory('')
+                  setFilterStatus('')
+                  setFilterDateRange('')
+                  setCustomDateFrom('')
+                  setCustomDateTo('')
+                }}
+                style={{
+                  padding: '8px 14px',
+                  background: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
+          {loading ? (
+            <p style={{ textAlign: 'center', padding: 40 }}>Loading bills...</p>
+          ) : filteredBills.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: 40,
+              opacity: 0.6,
+              border: '2px dashed #e5e7eb',
+              borderRadius: 8
+            }}>
+              <div style={{ fontSize: '3rem', marginBottom: 16 }}>💰</div>
+              <p style={{ fontSize: '1.1rem' }}>
+                {searchQuery || filterCategory.length > 0 || filterStatus.length > 0 || filterDateRange
+                  ? 'No bills match your current filters'
+                  : 'No bills recorded yet'}
+              </p>
+              <p>Start by adding your first bill above!</p>
+            </div>
           ) : (
-            <div className="table-wrap">
-              <table className="table">
+            <div style={{ overflowX: 'auto' }}>
+              <table className="table" style={{ minWidth: '600px' }}>
                 <thead>
                   <tr>
-                    <th>Bill</th>
+                    <th>Bill Name</th>
                     <th>Provider</th>
-                    <th>Amount</th>
-                    <th>Due Date</th>
-                    <th>Status</th>
                     <th>Category</th>
+                    <th>Due Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {bills.map((bill) => (
-                    <tr key={bill.id}>
-                      <td>{bill.name}</td>
-                      <td>{bill.provider}</td>
-                      <td>₱{bill.amount}</td>
-                      <td>{bill.dueDate}</td>
-                      <td>{bill.status}</td>
-                      <td>{bill.category}</td>
-                      <td>
-  <div className="action-row">
-    <button
-      className="icon-btn edit-btn"
-      type="button"
-      onClick={() => startEdit(bill)}
-      title="Edit"
-    >
-      ✏️
-    </button>
-
-    <button
-      className="icon-btn delete-btn"
-      type="button"
-      onClick={() => handleDelete(bill.id)}
-      title="Delete"
-    >
-      🗑️
-    </button>
-
-    {bill.status !== 'paid' && (
-      <button
-        className="icon-btn pay-btn"
-        type="button"
-        onClick={() => handlePay(bill)}
-        title="Mark Paid"
-      >
-        ✅
-      </button>
-    )}
-  </div>
-</td>
-                    </tr>
-                  ))}
+                  {filteredBills.map((bill) => {
+                    const statusBadge = getStatusBadge(bill)
+                    return (
+                      <tr key={bill.id}>
+                        <td style={{ fontWeight: 600 }}>{bill.name}</td>
+                        <td>{bill.provider}</td>
+                        <td>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span>{CATEGORY_ICONS[bill.category] || '📦'}</span>
+                            <span>{CATEGORIES.find(c => c.value === bill.category)?.label || bill.category}</span>
+                          </span>
+                        </td>
+                        <td>{formatDate(bill.dueDate)}</td>
+                        <td style={{ fontWeight: 600 }}>{formatCurrency(bill.amount || 0)}</td>
+                        <td>
+                          <span className={`badge ${statusBadge.class}`}>
+                            {statusBadge.text}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            {bill.status !== 'paid' && (
+                              <button
+                                onClick={() => handlePay(bill)}
+                                style={{
+                                  padding: '4px 8px',
+                                  background: '#10b981',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: 4,
+                                  cursor: 'pointer',
+                                  fontSize: '0.8rem'
+                                }}
+                              >
+                                ✅ Pay
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDelete(bill.id)}
+                              disabled={deletingId === bill.id}
+                              style={{
+                                padding: '4px 8px',
+                                background: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 4,
+                                cursor: 'pointer',
+                                fontSize: '0.8rem'
+                              }}
+                            >
+                              {deletingId === bill.id ? 'Deleting...' : '🗑️ Delete'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
           )}
-        </section>
+        </div>
+
       </div>
     </AppLayout>
-  );
+  )
 }

@@ -68,7 +68,7 @@ export class BillsService {
     bill.amount = dto.amount ?? bill.amount;
     bill.dueDate = dto.dueDate ?? bill.dueDate;
     bill.status = dto.status ?? bill.status;
-    bill.category = dto.category ?? bill.category;
+    bill.category = (dto.category as any) ?? bill.category;
 
     if (dto.isRecurring !== undefined) {
       bill.isRecurring = dto.isRecurring;

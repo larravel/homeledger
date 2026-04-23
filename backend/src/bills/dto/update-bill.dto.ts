@@ -31,8 +31,17 @@ export class UpdateBillDto {
   status?: 'paid' | 'unpaid' | 'overdue';
 
   @IsOptional()
-  @IsIn(['utility', 'rent', 'subscription', 'loan', 'insurance'])
-  category?: 'utility' | 'rent' | 'subscription' | 'loan' | 'insurance';
+  @IsIn([
+  'utility',
+  'rent',
+  'subscription',
+  'loan',
+  'insurance',
+  'transportation',
+  'healthcare',
+  'education',
+  ])
+  category?: string;
 
   @IsOptional()
   @IsBoolean()
