@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import AppLayout from '../layouts/AppLayout'
 import api from '../services/api'
 import { formatCurrency } from '../utils/format'
+import { Receipt, DollarSign, AlertTriangle, Clock } from 'lucide-react'
 
 interface Bill {
   id: number
@@ -271,63 +272,61 @@ export default function BillsPage() {
 
   return (
     <AppLayout>
-      <div className="page-container">
-    
+      <div className="dashboard-screen">
         {/* HEADER */}
-        <div className="page-header">
+        <div className="dashboard-screen-header">
           <div>
             <h1>Household Bills</h1>
-            <p className="muted">Track and manage all your household bills and financial obligations</p>
+            <p>Track and manage all your household bills and financial obligations</p>
           </div>
         </div>
 
         {/* SUMMARY CARDS */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 16,
-          marginBottom: 24
-        }}>
-          <div className="panel">
-            <h4 style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
-              Total Bills
-            </h4>
-            <p style={{ margin: '4px 0 0 0', fontSize: '1.8rem', fontWeight: 600 }}>
-              {totalBills}
-            </p>
+        <div className="dashboard-card-grid">
+          <div className="dashboard-stat-box blue">
+            <div className="dashboard-stat-top">
+              <div className="dashboard-stat-icon-wrap">
+                <Receipt size={18} />
+              </div>
+              <div className="dashboard-stat-title">Total Bills</div>
+            </div>
+            <div className="dashboard-stat-value">{totalBills}</div>
           </div>
 
-          <div className="panel">
-            <h4 style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
-              Total Amount
-            </h4>
-            <p style={{ margin: '4px 0 0 0', fontSize: '1.8rem', fontWeight: 600 }}>
-              {formatCurrency(totalAmount || 0)}
-            </p>
+          <div className="dashboard-stat-box green">
+            <div className="dashboard-stat-top">
+              <div className="dashboard-stat-icon-wrap">
+                <DollarSign size={18} />
+              </div>
+              <div className="dashboard-stat-title">Total Amount</div>
+            </div>
+            <div className="dashboard-stat-value">{formatCurrency(totalAmount || 0)}</div>
           </div>
 
-          <div className="panel">
-            <h4 style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
-              Unpaid Amount
-            </h4>
-            <p style={{ margin: '4px 0 0 0', fontSize: '1.8rem', fontWeight: 600 }}>
-              {formatCurrency(unpaidAmount || 0)}
-            </p>
+          <div className="dashboard-stat-box gold">
+            <div className="dashboard-stat-top">
+              <div className="dashboard-stat-icon-wrap">
+                <AlertTriangle size={18} />
+              </div>
+              <div className="dashboard-stat-title">Unpaid Amount</div>
+            </div>
+            <div className="dashboard-stat-value">{formatCurrency(unpaidAmount || 0)}</div>
           </div>
 
-          <div className="panel">
-            <h4 style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
-              Overdue Bills
-            </h4>
-            <p style={{ margin: '4px 0 0 0', fontSize: '1.8rem', fontWeight: 600 }}>
-              {overdueCount}
-            </p>
+          <div className="dashboard-stat-box blue">
+            <div className="dashboard-stat-top">
+              <div className="dashboard-stat-icon-wrap">
+                <Clock size={18} />
+              </div>
+              <div className="dashboard-stat-title">Overdue Bills</div>
+            </div>
+            <div className="dashboard-stat-value">{overdueCount}</div>
           </div>
         </div>
 
         {/* DUE SOON ALERT */}
         {dueSoonCount > 0 && (
-          <div className="panel" style={{ 
+          <div className="dashboard-panel" style={{ 
             marginBottom: 24, 
             border: '1px solid #facc15', 
             background: '#fefce822' 
@@ -339,8 +338,10 @@ export default function BillsPage() {
 
         {/* CATEGORY BREAKDOWN */}
         {categoryBreakdown.length > 0 && (
-          <div className="panel" style={{ marginBottom: 24 }}>
-            <h3 style={{ marginBottom: 16 }}>Bills by Category</h3>
+          <div className="dashboard-panel" style={{ marginBottom: 24 }}>
+            <div className="dashboard-panel-headline">
+              <h2>Bills by Category</h2>
+            </div>
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
@@ -369,8 +370,10 @@ export default function BillsPage() {
         )}
 
         {/* ADD BILL FORM */}
-        <div className="panel" style={{ marginBottom: 24 }}>
-          <h3 style={{ marginBottom: 16 }}>Add New Bill</h3>
+        <div className="dashboard-panel" style={{ marginBottom: 24 }}>
+          <div className="dashboard-panel-headline">
+            <h2>Add New Bill</h2>
+          </div>
 
           <form
             onSubmit={handleSubmit}
@@ -476,170 +479,164 @@ export default function BillsPage() {
         </div>
 
         {/* BILL HISTORY */}
-        <div className="panel">
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 16,
-            marginBottom: 20
-          }}>
+        <div className="dashboard-panel">
+          <div className="dashboard-panel-headline">
             <div>
-              <h3 style={{ margin: 0 }}>Bill History</h3>
+              <h2>Bill History</h2>
               <p style={{ margin: '6px 0 0 0', color: '#6b7280', fontSize: '0.9rem' }}>
                 Showing {filteredBills.length} bill{filteredBills.length === 1 ? '' : 's'}
               </p>
             </div>
+          </div>
 
-            <div style={{ display: 'flex', gap: 12, alignItems: 'end', flexWrap: 'wrap' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
-                  Search
-                </label>
-                <input
-                  type="text"
-                  placeholder="Bill name or provider..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: 4,
-                    border: '1px solid #d1d5db',
-                    fontSize: '0.9rem',
-                    minWidth: 200
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
-                  Category
-                </label>
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: 4,
-                    border: '1px solid #d1d5db',
-                    fontSize: '0.9rem',
-                    minWidth: 160
-                  }}
-                >
-                  <option value="">All Categories</option>
-                  {CATEGORIES.map(cat => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
-                  Status
-                </label>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: 4,
-                    border: '1px solid #d1d5db',
-                    fontSize: '0.9rem',
-                    minWidth: 140
-                  }}
-                >
-                  <option value="">All Status</option>
-                  <option value="paid">Paid</option>
-                  <option value="unpaid">Unpaid</option>
-                  <option value="dueSoon">Due Soon</option>
-                  <option value="overdue">Overdue</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
-                  Date Range
-                </label>
-                <select
-                  value={filterDateRange}
-                  onChange={(e) => setFilterDateRange(e.target.value)}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: 4,
-                    border: '1px solid #d1d5db',
-                    fontSize: '0.9rem',
-                    minWidth: 140
-                  }}
-                >
-                  <option value="">All Dates</option>
-                  <option value="thisMonth">This Month</option>
-                  <option value="lastMonth">Last Month</option>
-                  <option value="custom">Custom Range</option>
-                </select>
-              </div>
-
-              {filterDateRange === 'custom' && (
-                <>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
-                      From
-                    </label>
-                    <input
-                      type="date"
-                      value={customDateFrom}
-                      onChange={(e) => setCustomDateFrom(e.target.value)}
-                      style={{
-                        padding: '4px 8px',
-                        borderRadius: 4,
-                        border: '1px solid #d1d5db',
-                        fontSize: '0.9rem'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
-                      To
-                    </label>
-                    <input
-                      type="date"
-                      value={customDateTo}
-                      onChange={(e) => setCustomDateTo(e.target.value)}
-                      style={{
-                        padding: '8px 12px',
-                        borderRadius: 8,
-                        border: '1px solid #d1d5db',
-                        fontSize: '0.9rem'
-                      }}
-                    />
-                  </div>
-                </>
-              )}
-
-              <button
-                onClick={() => {
-                  setSearchQuery('')
-                  setFilterCategory('')
-                  setFilterStatus('')
-                  setFilterDateRange('')
-                  setCustomDateFrom('')
-                  setCustomDateTo('')
-                }}
+          {/* FILTERS */}
+          <div style={{ display: 'flex', gap: 12, alignItems: 'end', flexWrap: 'wrap', marginBottom: 20 }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
+                Search
+              </label>
+              <input
+                type="text"
+                placeholder="Bill name or provider..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
-                  padding: '8px 14px',
-                  background: '#6b7280',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  fontSize: '0.9rem'
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  border: '1px solid #d1d5db',
+                  fontSize: '0.9rem',
+                  minWidth: 200
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
+                Category
+              </label>
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  border: '1px solid #d1d5db',
+                  fontSize: '0.9rem',
+                  minWidth: 160
                 }}
               >
-                Reset
-              </button>
+                <option value="">All Categories</option>
+                {CATEGORIES.map(cat => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
+                Status
+              </label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  border: '1px solid #d1d5db',
+                  fontSize: '0.9rem',
+                  minWidth: 140
+                }}
+              >
+                <option value="">All Status</option>
+                <option value="paid">Paid</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="dueSoon">Due Soon</option>
+                <option value="overdue">Overdue</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
+                Date Range
+              </label>
+              <select
+                value={filterDateRange}
+                onChange={(e) => setFilterDateRange(e.target.value)}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  border: '1px solid #d1d5db',
+                  fontSize: '0.9rem',
+                  minWidth: 140
+                }}
+              >
+                <option value="">All Dates</option>
+                <option value="thisMonth">This Month</option>
+                <option value="lastMonth">Last Month</option>
+                <option value="custom">Custom Range</option>
+              </select>
+            </div>
+
+            {filterDateRange === 'custom' && (
+              <>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
+                    From
+                  </label>
+                  <input
+                    type="date"
+                    value={customDateFrom}
+                    onChange={(e) => setCustomDateFrom(e.target.value)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: 4,
+                      border: '1px solid #d1d5db',
+                      fontSize: '0.9rem'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
+                    To
+                  </label>
+                  <input
+                    type="date"
+                    value={customDateTo}
+                    onChange={(e) => setCustomDateTo(e.target.value)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: 4,
+                      border: '1px solid #d1d5db',
+                      fontSize: '0.9rem'
+                    }}
+                  />
+                </div>
+              </>
+            )}
+
+            <button
+              onClick={() => {
+                setSearchQuery('')
+                setFilterCategory('')
+                setFilterStatus('')
+                setFilterDateRange('')
+                setCustomDateFrom('')
+                setCustomDateTo('')
+              }}
+              style={{
+                padding: '8px 14px',
+                background: '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: 8,
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+            >
+              Reset
+            </button>
           </div>
 
           {loading ? (
@@ -737,7 +734,6 @@ export default function BillsPage() {
             </div>
           )}
         </div>
-
       </div>
     </AppLayout>
   )

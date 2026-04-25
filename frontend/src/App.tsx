@@ -5,7 +5,10 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import BillsPage from './pages/BillsPage';
 import PaymentHistoryPage from './pages/PaymentHistoryPage';
-import BudgetingPage from './pages/Budgeting';
+import ProfilePage from './pages/ProfilePage';
+import ExpensesPage from './pages/ExpensesPage'; // ✅ ADD THIS
+import RecurringBillsPage from './pages/RecurringBillsPage'; // ✅ ADD THIS
+import BudgetingPage from './pages/Budgeting'; // ✅ ADD THIS
 
 export default function App() {
   return (
@@ -40,6 +43,37 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+
+      {/* ✅ NEW ROUTE */}
+      <Route
+        path="/recurring-bills"
+        element={
+          <ProtectedRoute>
+            <RecurringBillsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ✅ NEW ROUTE */}
+      <Route
+        path="/expenses"
+        element={
+          <ProtectedRoute>
+            <ExpensesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ✅ NEW ROUTE */}
       <Route
         path="/budgeting"
         element={
@@ -48,7 +82,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
     </Routes>
   );
 }
