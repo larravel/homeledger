@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import BillsPage from './pages/BillsPage';
 import PaymentHistoryPage from './pages/PaymentHistoryPage';
+import BudgetingPage from './pages/Budgeting';
 
 export default function App() {
   return (
@@ -39,6 +40,15 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/budgeting"
+        element={
+          <ProtectedRoute>
+            <BudgetingPage />
+          </ProtectedRoute>
+        }
+      />
+
     </Routes>
   );
 }

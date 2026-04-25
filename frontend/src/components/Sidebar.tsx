@@ -59,6 +59,10 @@ export default function Sidebar() {
           💳 {!collapsed && 'Payments'}
         </NavLink>
 
+        <NavLink to="/budgeting" style={linkStyle}>
+          ?? {!collapsed && 'Budgeting'}
+        </NavLink>
+
         <NavLink to="/utility-usage" style={linkStyle}>
           ⚡ {!collapsed && 'Utilities'}
         </NavLink>
