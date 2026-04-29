@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, LockKeyhole, Mail, ShieldCheck, UserRound } from 'lucide-react';
 import api from '../services/api';
 
 export default function RegisterPage() {
@@ -32,41 +33,95 @@ export default function RegisterPage() {
 
   return (
     <div className="auth-page">
-      <form className="auth-card" onSubmit={handleSubmit}>
-        <h1>Register</h1>
+      <div className="auth-shell">
+        <section className="auth-hero">
+          <div className="auth-badge">HomeLedger</div>
+          <h1>Build a cleaner way to manage your household bills.</h1>
+          <p>
+            Create your workspace to organize monthly budgets, recurring bills,
+            payment history, and day-to-day household expenses.
+          </p>
 
-        <input
-          className="input"
-          type="text"
-          placeholder="Full name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+          <div className="auth-feature-list">
+            <div className="auth-feature-item">
+              <span className="auth-feature-icon">
+                <ShieldCheck size={16} />
+              </span>
+              <div>
+                <strong>One connected billing system</strong>
+                <small>Bills, expenses, payment history, and budgeting stay in sync.</small>
+              </div>
+            </div>
+            <div className="auth-feature-item">
+              <span className="auth-feature-icon">
+                <ArrowRight size={16} />
+              </span>
+              <div>
+                <strong>Simple monthly control</strong>
+                <small>Know what is due, what is spent, and what is still available this month.</small>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <input
-          className="input"
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        <form className="auth-card" onSubmit={handleSubmit}>
+          <div className="auth-card-head">
+            <span className="auth-kicker">Create Account</span>
+            <h2>Register for HomeLedger</h2>
+            <p>Set up your account to start managing your household billing system.</p>
+          </div>
 
-        <input
-          className="input"
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <label className="auth-field">
+            <span>Full Name</span>
+            <div className="auth-input-wrap">
+              <UserRound size={16} />
+              <input
+                className="input"
+                type="text"
+                placeholder="Your full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+          </label>
 
-        <button className="primary-btn" type="submit" disabled={loading}>
-          {loading ? 'Registering...' : 'Register'}
-        </button>
+          <label className="auth-field">
+            <span>Email</span>
+            <div className="auth-input-wrap">
+              <Mail size={16} />
+              <input
+                className="input"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </label>
 
-        <p className="auth-text">
-          Already have an account? <Link to="/login">Login</Link>
-        </p>
-      </form>
+          <label className="auth-field">
+            <span>Password</span>
+            <div className="auth-input-wrap">
+              <LockKeyhole size={16} />
+              <input
+                className="input"
+                type="password"
+                placeholder="Create a password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </label>
+
+          <button className="primary-btn auth-submit-btn" type="submit" disabled={loading}>
+            {loading ? 'Registering...' : 'Create Account'}
+          </button>
+
+          <p className="auth-text">
+            Already have an account? <Link to="/login">Login here</Link>
+          </p>
+        </form>
+      </div>
     </div>
   );
 }
