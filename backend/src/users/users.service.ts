@@ -27,4 +27,28 @@ export class UsersService {
     });
   }
 
+  async updatePassword(userId: number, hashedPassword: string) {
+    await this.userRepository.update(userId, {
+      password: hashedPassword,
+    });
+
+    return this.userRepository.findOne({
+      where: { id: userId },
+    });
+  }
+
+
+  async findById(userId: number) {
+    return this.userRepository.findOne({
+      where: { id: userId },
+    });
+  }
+
+  async updateProfile(userId: number, name: string) {
+    await this.userRepository.update(userId, {
+      name,
+    });
+
+    return this.findById(userId);
+  }
 }

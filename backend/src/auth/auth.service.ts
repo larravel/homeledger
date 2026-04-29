@@ -72,4 +72,52 @@ export class AuthService {
       },
     };
   }
+
+
+  async getUserById(userId: number) {
+    return await this.usersService.findById(userId);
+  }
+
+  async updateProfile(userId: number, name: string) {
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      throw new BadRequestException('Name is required');
+    }
+
+    const user = await this.usersService.updateProfile(userId, trimmedName);
+
+    return {
+      message: 'Profile updated successfully',
+      user: {
+        id: user?.id,
+        name: user?.name,
+        email: user?.email,
+      },
+    };
+  }
+
+  async changePassword(userId: number, currentPassword: string, newPassword: string) {
+    // Get user by ID from the repository
+    const user = await this.usersService.findById(userId);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const passwordMatched = await bcrypt.compare(currentPassword, user.password);
+
+    if (!passwordMatched) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.usersService.updatePassword(user.id, hashedPassword);
+
+    return {
+      message: 'Password updated successfully',
+    };
+  }
 }
+
+

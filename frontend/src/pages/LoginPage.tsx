@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, LockKeyhole, Mail, ShieldCheck } from 'lucide-react';
 import api from '../services/api';
 
 export default function LoginPage() {
@@ -35,33 +36,85 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      <form className="auth-card" onSubmit={handleSubmit}>
-        <h1>Login</h1>
+      <div className="auth-shell">
+        <section className="auth-hero">
+          <div className="auth-badge">HomeLedger</div>
+          <h1>Welcome back to your household billing workspace.</h1>
+          <p>
+            Stay on top of due dates, monthly budgets, expenses, and recurring
+            household payments in one clean system.
+          </p>
 
-        <input
-          className="input"
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+          <div className="auth-feature-list">
+            <div className="auth-feature-item">
+              <span className="auth-feature-icon">
+                <ShieldCheck size={16} />
+              </span>
+              <div>
+                <strong>Secure household records</strong>
+                <small>Your bills, budgets, and payment activity stay private to your account.</small>
+              </div>
+            </div>
+            <div className="auth-feature-item">
+              <span className="auth-feature-icon">
+                <ArrowRight size={16} />
+              </span>
+              <div>
+                <strong>Quick monthly overview</strong>
+                <small>Jump straight into dashboards, due bills, and recent payment activity.</small>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <input
-          className="input"
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <form className="auth-card" onSubmit={handleSubmit}>
+          <div className="auth-card-head">
+            <span className="auth-kicker">Sign In</span>
+            <h2>Login to HomeLedger</h2>
+            <p>Enter your account details to continue managing your household finances.</p>
+          </div>
 
-        <button className="primary-btn" type="submit" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
-        </button>
+          <label className="auth-field">
+            <span>Email</span>
+            <div className="auth-input-wrap">
+              <Mail size={16} />
+              <input
+                className="input"
+                type="email"
+                placeholder="Enter your account email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </label>
 
-        <p className="auth-text">
-          No account yet? <Link to="/register">Register</Link>
-        </p>
-      </form>
+          <label className="auth-field">
+            <span>Password</span>
+            <div className="auth-input-wrap">
+              <LockKeyhole size={16} />
+              <input
+                className="input"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </label>
+
+          <button className="primary-btn auth-submit-btn" type="submit" disabled={loading}>
+            {loading ? 'Signing you in...' : 'Enter HomeLedger'}
+          </button>
+
+          <p className="auth-note">
+            Use the account you created for your household billing workspace.
+          </p>
+
+          <p className="auth-text">
+            New to HomeLedger? <Link to="/register">Create your account</Link>
+          </p>
+        </form>
+      </div>
     </div>
   );
 }
