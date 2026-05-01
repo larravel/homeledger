@@ -1,0 +1,335 @@
+.bills-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr);
+  gap: 14px;
+}
+
+.bills-panel-copy {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.bills-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.bills-field {
+  display: grid;
+  gap: 7px;
+}
+
+.bills-field span,
+.bills-filter span {
+  color: #4b5563;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.bills-field-wide {
+  grid-column: 1 / -1;
+}
+
+.bills-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.bills-snapshot-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.bills-snapshot-card {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid #ebf1f7;
+  background: #f8fbff;
+}
+
+.bills-snapshot-card span {
+  display: block;
+  color: #6b7280;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.bills-snapshot-card strong {
+  display: block;
+  margin-top: 8px;
+  color: #111827;
+  font-size: 1.15rem;
+}
+
+.bills-upcoming-block {
+  padding-top: 4px;
+}
+
+.bills-upcoming-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.bills-upcoming-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.bills-upcoming-head small {
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.bills-upcoming-list {
+  display: grid;
+  gap: 10px;
+}
+
+.bills-upcoming-item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 1px solid #edf2f7;
+}
+
+.bills-upcoming-item:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.bills-upcoming-main strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.bills-upcoming-main small {
+  display: block;
+  margin-top: 4px;
+  color: #6b7280;
+}
+
+.bills-upcoming-side {
+  text-align: right;
+}
+
+.bills-upcoming-side strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.bills-status-dot {
+  display: inline-flex;
+  margin-top: 5px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.bills-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) repeat(2, minmax(150px, 0.8fr)) auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.bills-filter {
+  display: grid;
+  gap: 7px;
+}
+
+.bills-reset-btn {
+  min-height: 44px;
+}
+
+.bills-table-wrap {
+  border: 1px solid #edf2f7;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.bills-table {
+  margin-top: 0;
+}
+
+.bills-table th {
+  background: #f8fbff;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.bills-table td {
+  vertical-align: middle;
+}
+
+.bills-table-primary {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.bills-table-primary strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.bills-table-primary small {
+  display: block;
+  margin-top: 4px;
+  color: #6b7280;
+}
+
+.bills-amount-cell {
+  font-weight: 700;
+  color: #111827;
+}
+
+.bills-status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.bills-status-chip.paid,
+.bills-status-dot.paid {
+  color: #15905d;
+}
+
+.bills-status-chip.paid {
+  background: #dcfce7;
+}
+
+.bills-status-chip.overdue,
+.bills-status-dot.overdue {
+  color: #b42318;
+}
+
+.bills-status-chip.overdue {
+  background: #fee2e2;
+}
+
+.bills-status-chip.dueSoon,
+.bills-status-dot.dueSoon {
+  color: #2563eb;
+}
+
+.bills-status-chip.dueSoon {
+  background: #dbeafe;
+}
+
+.bills-status-chip.unpaid,
+.bills-status-dot.unpaid {
+  color: #475467;
+}
+
+.bills-status-chip.unpaid {
+  background: #eef2f7;
+}
+
+.bills-action-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bills-icon-btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.bills-icon-btn.edit {
+  background: #e7f0ff;
+  color: #245cdb;
+}
+
+.bills-icon-btn.delete {
+  background: #fee2e2;
+  color: #c0392b;
+}
+
+.bills-icon-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.bills-smart-avatar {
+  background: #edf3ff;
+  color: #2b5ecf;
+}
+
+.bills-brand-avatar {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.bills-brand-avatar.netflix {
+  background: #ffe8e8;
+  color: #b20710;
+}
+
+.bills-brand-avatar.spotify {
+  background: #e9fbef;
+  color: #1db954;
+}
+
+.bills-brand-avatar.youtube {
+  background: #ffeaea;
+  color: #ff0000;
+}
+
+.bills-brand-avatar.disney {
+  background: #eef2ff;
+  color: #1e40af;
+}
+
+.bills-brand-avatar.prime {
+  background: #e8f6ff;
+  color: #0f6cbd;
+}
+
+@media (max-width: 1200px) {
+  .bills-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .bills-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .bills-form-grid,
+  .bills-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .bills-action-row {
+    flex-wrap: wrap;
+  }
+}

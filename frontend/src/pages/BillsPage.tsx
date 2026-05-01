@@ -1,294 +1,296 @@
-import { useEffect, useState, useMemo } from 'react'
-import AppLayout from '../layouts/AppLayout'
-import api from '../services/api'
-import { formatCurrency } from '../utils/format'
-import { Receipt, DollarSign, AlertTriangle, Clock } from 'lucide-react'
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react';
+import {
+  AlertTriangle,
+  CalendarClock,
+  HandCoins,
+  PencilLine,
+  Receipt,
+  Trash2,
+} from 'lucide-react';
+import AppLayout from '../layouts/AppLayout';
+import api from '../services/api';
+import '../styles/bills-page.css';
+import { formatCurrency } from '../utils/format';
+import { SmartItemAvatar } from '../utils/itemVisual';
+import { formatDateByPreference } from '../utils/preferences';
 
 interface Bill {
-  id: number
-  name: string
-  provider: string
-  amount: number
-  dueDate: string
-  status: string
-  category: string
-  isRecurring: boolean
-  frequency: string | null
+  id: number;
+  name: string;
+  provider: string;
+  amount: number;
+  dueDate: string;
+  status: string;
+  category: string;
+  isRecurring: boolean;
+  frequency: string | null;
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  utility: '⚡',
-  rent: '🏠',
-  subscription: '📱',
-  loan: '💳',
-  insurance: '🛡️',
-  transportation: '🚗',
-  healthcare: '🏥',
-  education: '🎓'
+const BILL_CATEGORIES = [
+  { value: 'utility', label: 'Utilities' },
+  { value: 'rent', label: 'Rent / Mortgage' },
+  { value: 'subscription', label: 'Subscriptions' },
+  { value: 'loan', label: 'Loans' },
+  { value: 'insurance', label: 'Insurance' },
+];
+
+const LEGACY_CATEGORY_LABELS: Record<string, string> = {
+  transportation: 'Transportation',
+  healthcare: 'Healthcare',
+  education: 'Education',
+};
+
+type BillStatus = 'paid' | 'overdue' | 'dueSoon' | 'unpaid';
+
+function getCategoryLabel(category: string) {
+  return (
+    BILL_CATEGORIES.find((item) => item.value === category)?.label ||
+    LEGACY_CATEGORY_LABELS[category] ||
+    category
+  );
 }
 
-const CATEGORIES = [
-  { value: 'utility', label: 'Utilities', icon: '⚡' },
-  { value: 'rent', label: 'Rent/Mortgage', icon: '🏠' },
-  { value: 'subscription', label: 'Subscriptions', icon: '📱' },
-  { value: 'loan', label: 'Loans', icon: '💳' },
-  { value: 'insurance', label: 'Insurance', icon: '🛡️' },
-  { value: 'transportation', label: 'Transportation', icon: '🚗' },
-  { value: 'healthcare', label: 'Healthcare', icon: '🏥' },
-  { value: 'education', label: 'Education', icon: '🎓' }
-]
+function getBillStatus(bill: Pick<Bill, 'status' | 'dueDate'>): BillStatus {
+  if (bill.status === 'paid') return 'paid';
+
+  const today = new Date();
+  const due = new Date(`${bill.dueDate}T00:00:00`);
+  const todayFloor = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const diff = (due.getTime() - todayFloor.getTime()) / (1000 * 60 * 60 * 24);
+
+  if (due < todayFloor) return 'overdue';
+  if (diff <= 7 && diff >= 0) return 'dueSoon';
+  return 'unpaid';
+}
+
+function getStatusMeta(bill: Pick<Bill, 'status' | 'dueDate'>) {
+  const status = getBillStatus(bill);
+  switch (status) {
+    case 'paid':
+      return { text: 'Paid', className: 'paid' };
+    case 'overdue':
+      return { text: 'Overdue', className: 'overdue' };
+    case 'dueSoon':
+      return { text: 'Due Soon', className: 'dueSoon' };
+    default:
+      return { text: 'Unpaid', className: 'unpaid' };
+  }
+}
+
+function formatDate(value: string) {
+  return formatDateByPreference(value, '-');
+}
 
 export default function BillsPage() {
-  const [bills, setBills] = useState<Bill[]>([])
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [filterCategory, setFilterCategory] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
-  const [filterDateRange, setFilterDateRange] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [customDateFrom, setCustomDateFrom] = useState('')
-  const [customDateTo, setCustomDateTo] = useState('')
-  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [payingId, setPayingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
 
   const [form, setForm] = useState({
     name: '',
     provider: '',
     amount: '',
     dueDate: '',
-    category: ''
-  })
+    category: '',
+  });
 
-  // ✅ FIX: supports different API response shapes + error handling
-  const fetchData = async () => {
-    setLoading(true)
+  async function fetchData() {
+    setLoading(true);
     try {
-      const response = await api.get('/bills')
-
-      const data = Array.isArray(response.data)
-        ? response.data
-        : response.data?.data || []
-
-      setBills(data)
-    } catch (err) {
-      console.error('Fetch bills error:', err)
-      setBills([])
+      const response = await api.get('/bills');
+      const data = Array.isArray(response.data) ? response.data : response.data?.data || [];
+      setBills(data);
+    } catch (error) {
+      console.error('Fetch bills error:', error);
+      setBills([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
-  // ✅ FIX: proper typing
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
+  function handleChange(event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   }
 
-  const isValid = form.name && form.provider && Number(form.amount) > 0 && form.dueDate
+  function resetForm() {
+    setEditingId(null);
+    setForm({
+      name: '',
+      provider: '',
+      amount: '',
+      dueDate: '',
+      category: '',
+    });
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!isValid) return
+  function handleEdit(bill: Bill) {
+    setEditingId(bill.id);
+    setForm({
+      name: bill.name,
+      provider: bill.provider,
+      amount: `${Number(bill.amount) || ''}`,
+      dueDate: bill.dueDate?.slice(0, 10) || '',
+      category: bill.category,
+    });
+  }
 
-    setSubmitting(true)
+  const isValid =
+    form.name.trim() &&
+    form.provider.trim() &&
+    Number(form.amount) > 0 &&
+    form.dueDate &&
+    form.category;
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!isValid) return;
+
+    setSubmitting(true);
+    const payload = {
+      name: form.name.trim(),
+      provider: form.provider.trim(),
+      amount: Number(form.amount),
+      dueDate: form.dueDate,
+      category: form.category,
+      isRecurring: false,
+    };
 
     try {
-      await api.post('/bills', {
-        name: form.name.trim(),
-        provider: form.provider.trim(),
-        amount: Number(form.amount),
-        dueDate: form.dueDate,
-        category: form.category,
-        isRecurring: false
-      })
-
-      setForm({ name: '', provider: '', amount: '', dueDate: '', category: '' })
-      await fetchData()
-    } catch (err) {
-      console.error('Save bill error:', err)
+      if (editingId) {
+        await api.patch(`/bills/${editingId}`, payload);
+      } else {
+        await api.post('/bills', payload);
+      }
+      resetForm();
+      await fetchData();
+    } catch (error) {
+      console.error('Save bill error:', error);
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
   }
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this bill?')) return
+  async function handleDelete(id: number) {
+    if (!window.confirm('Are you sure you want to delete this bill?')) return;
 
-    setDeletingId(id)
+    setDeletingId(id);
     try {
-      await api.delete(`/bills/${id}`)
-      await fetchData()
-    } catch (err) {
-      console.error('Delete error:', err)
+      await api.delete(`/bills/${id}`);
+      if (editingId === id) resetForm();
+      await fetchData();
+    } catch (error) {
+      console.error('Delete bill error:', error);
     } finally {
-      setDeletingId(null)
+      setDeletingId(null);
     }
   }
 
-  const handlePay = async (bill: Bill) => {
+  async function handlePay(bill: Bill) {
+    setPayingId(bill.id);
     try {
       await api.post(`/payments/bill/${bill.id}`, {
         paymentDate: new Date().toISOString().split('T')[0],
-      })
-      await fetchData()
-    } catch (err) {
-      console.error('Pay bill error:', err)
-    }
-  }
-
-  // Helper functions for filtering
-  const getBillStatus = (bill: Bill) => {
-    if (bill.status === 'paid') return 'paid'
-    
-    const today = new Date()
-    const due = new Date(bill.dueDate)
-    const diff = (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-    
-    if (due < today) return 'overdue'
-    if (diff <= 7 && diff >= 0) return 'dueSoon'
-    return 'unpaid'
-  }
-
-  const isDateInRange = (dateString: string, range: string, from?: string, to?: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    
-    switch (range) {
-      case 'thisMonth':
-        return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
-      case 'lastMonth': {
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1)
-        return date.getMonth() === lastMonth.getMonth() && date.getFullYear() === lastMonth.getFullYear()
-      }
-      case 'custom': {
-        if (!from || !to) return true
-        const fromDate = new Date(from)
-        const toDate = new Date(to)
-        return date >= fromDate && date <= toDate
-      }
-      default:
-        return true
+      });
+      await fetchData();
+    } catch (error) {
+      console.error('Pay bill error:', error);
+    } finally {
+      setPayingId(null);
     }
   }
 
   const filteredBills = useMemo(() => {
-    return bills.filter(bill => {
-      // Search filter
+    return bills.filter((bill) => {
       if (searchQuery) {
-        const query = searchQuery.toLowerCase()
-        const matchesSearch = 
-          bill.name.toLowerCase().includes(query) || 
-          bill.provider.toLowerCase().includes(query)
-        if (!matchesSearch) return false
+        const source = `${bill.name} ${bill.provider}`.toLowerCase();
+        if (!source.includes(searchQuery.toLowerCase())) return false;
       }
 
-      // Category filter
-      if (filterCategory && bill.category !== filterCategory) {
-        return false
-      }
+      if (filterCategory && bill.category !== filterCategory) return false;
+      if (filterStatus && getBillStatus(bill) !== filterStatus) return false;
 
-      // Status filter
-      if (filterStatus) {
-        const billStatus = getBillStatus(bill)
-        if (billStatus !== filterStatus) return false
-      }
+      return true;
+    });
+  }, [bills, searchQuery, filterCategory, filterStatus]);
 
-      // Date range filter
-      if (filterDateRange && !isDateInRange(bill.dueDate, filterDateRange, customDateFrom, customDateTo)) {
-        return false
-      }
-
-      return true
-    })
-  }, [bills, searchQuery, filterCategory, filterStatus, filterDateRange, customDateFrom, customDateTo])
-
-  const totalBills = filteredBills.length
-
+  const totalBills = filteredBills.length;
   const totalAmount = useMemo(
-    () => filteredBills.reduce((sum, b) => sum + (Number(b.amount) || 0), 0),
-    [filteredBills]
-  )
-
-  const unpaidAmount = useMemo(
-    () => filteredBills.filter(b => b.status !== 'paid').reduce((sum, b) => sum + (Number(b.amount) || 0), 0),
-    [filteredBills]
-  )
-
-  const overdueCount = useMemo(
-    () => filteredBills.filter(b => b.status !== 'paid' && new Date(b.dueDate) < new Date()).length,
-    [filteredBills]
-  )
-
+    () => filteredBills.reduce((sum, bill) => sum + Number(bill.amount || 0), 0),
+    [filteredBills],
+  );
   const dueSoonCount = useMemo(
-    () => {
-      const today = new Date()
-      return filteredBills.filter(b => {
-        if (b.status === 'paid') return false
-        const due = new Date(b.dueDate)
-        const diff = (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-        return diff <= 7 && diff >= 0
-      }).length
-    },
-    [filteredBills]
-  )
+    () => filteredBills.filter((bill) => getBillStatus(bill) === 'dueSoon').length,
+    [filteredBills],
+  );
+  const overdueCount = useMemo(
+    () => filteredBills.filter((bill) => getBillStatus(bill) === 'overdue').length,
+    [filteredBills],
+  );
+
+  const upcomingBills = useMemo(
+    () =>
+      [...filteredBills]
+        .filter((bill) => bill.status !== 'paid')
+        .sort(
+          (left, right) =>
+            new Date(left.dueDate).getTime() - new Date(right.dueDate).getTime(),
+        )
+        .slice(0, 4),
+    [filteredBills],
+  );
 
   const categoryBreakdown = useMemo(() => {
-    const breakdown: Record<string, number> = {}
+    const totals = new Map<string, number>();
+    filteredBills.forEach((bill) => {
+      totals.set(bill.category, (totals.get(bill.category) || 0) + Number(bill.amount || 0));
+    });
 
-    filteredBills.forEach(b => {
-      const amount = Number(b.amount) || 0
-      breakdown[b.category] = (breakdown[b.category] || 0) + amount
-    })
+    return [...totals.entries()]
+      .map(([category, amount]) => ({
+        category,
+        amount,
+        label: getCategoryLabel(category),
+      }))
+      .sort((left, right) => right.amount - left.amount);
+  }, [filteredBills]);
 
-    return Object.entries(breakdown)
-      .map(([category, amount]) => ({ category, amount }))
-      .sort((a, b) => b.amount - a.amount)
-  }, [filteredBills])
+  const filterCategories = useMemo(() => {
+    const categories = new Set<string>(BILL_CATEGORIES.map((item) => item.value));
+    bills.forEach((bill) => categories.add(bill.category));
 
-  // ✅ FIX: prevents "Invalid Date"
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '-'
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) return '-'
-
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
-  const getStatusBadge = (bill: Bill) => {
-    const status = getBillStatus(bill)
-    switch (status) {
-      case 'paid': return { text: 'Paid', class: 'paid' }
-      case 'overdue': return { text: 'Overdue', class: 'overdue' }
-      case 'dueSoon': return { text: 'Due Soon', class: 'dueSoon' }
-      default: return { text: 'Unpaid', class: 'unpaid' }
-    }
-  }
+    return [...categories].map((value) => ({
+      value,
+      label: getCategoryLabel(value),
+    }));
+  }, [bills]);
 
   return (
     <AppLayout>
       <div className="dashboard-screen">
-        {/* HEADER */}
         <div className="dashboard-screen-header">
           <div>
-            <h1>Household Bills</h1>
-            <p>Track and manage all your household bills and financial obligations</p>
+            <h1>Bills</h1>
+            <p>Track due dates, manage obligations, and pay bills on time.</p>
           </div>
         </div>
 
-        {/* SUMMARY CARDS */}
         <div className="dashboard-card-grid">
           <div className="dashboard-stat-box blue">
             <div className="dashboard-stat-top">
               <div className="dashboard-stat-icon-wrap">
                 <Receipt size={18} />
               </div>
-              <div className="dashboard-stat-title">Total Bills</div>
+              <div className="dashboard-stat-title">Active Bills</div>
             </div>
             <div className="dashboard-stat-value">{totalBills}</div>
           </div>
@@ -296,343 +298,251 @@ export default function BillsPage() {
           <div className="dashboard-stat-box green">
             <div className="dashboard-stat-top">
               <div className="dashboard-stat-icon-wrap">
-                <DollarSign size={18} />
+                <HandCoins size={18} />
               </div>
-              <div className="dashboard-stat-title">Total Amount</div>
+              <div className="dashboard-stat-title">Total Bill Amount</div>
             </div>
-            <div className="dashboard-stat-value">{formatCurrency(totalAmount || 0)}</div>
+            <div className="dashboard-stat-value">{formatCurrency(totalAmount)}</div>
           </div>
 
           <div className="dashboard-stat-box gold">
             <div className="dashboard-stat-top">
               <div className="dashboard-stat-icon-wrap">
-                <AlertTriangle size={18} />
+                <CalendarClock size={18} />
               </div>
-              <div className="dashboard-stat-title">Unpaid Amount</div>
+              <div className="dashboard-stat-title">Due Soon</div>
             </div>
-            <div className="dashboard-stat-value">{formatCurrency(unpaidAmount || 0)}</div>
+            <div className="dashboard-stat-value">{dueSoonCount}</div>
           </div>
 
           <div className="dashboard-stat-box blue">
             <div className="dashboard-stat-top">
               <div className="dashboard-stat-icon-wrap">
-                <Clock size={18} />
+                <AlertTriangle size={18} />
               </div>
-              <div className="dashboard-stat-title">Overdue Bills</div>
+              <div className="dashboard-stat-title">Overdue</div>
             </div>
             <div className="dashboard-stat-value">{overdueCount}</div>
           </div>
         </div>
 
-        {/* DUE SOON ALERT */}
-        {dueSoonCount > 0 && (
-          <div className="dashboard-panel" style={{ 
-            marginBottom: 24, 
-            border: '1px solid #facc15', 
-            background: '#fefce822' 
-          }}>
-            <h3 style={{ marginBottom: 8, color: '#facc15' }}>⚠️ Bills Due Soon</h3>
-            <p>You have {dueSoonCount} bill(s) due within the next 7 days. Don't forget to pay them on time!</p>
-          </div>
-        )}
-
-        {/* CATEGORY BREAKDOWN */}
-        {categoryBreakdown.length > 0 && (
-          <div className="dashboard-panel" style={{ marginBottom: 24 }}>
+        <div className="bills-workspace-grid">
+          <section className="dashboard-panel">
             <div className="dashboard-panel-headline">
-              <h2>Bills by Category</h2>
+              <div>
+                <h2>{editingId ? 'Edit Bill' : 'Add New Bill'}</h2>
+                <p className="bills-panel-copy">
+                  Keep your bill list current so due dates, budgets, and payment history stay aligned.
+                </p>
+              </div>
             </div>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-              gap: 12
-            }}>
-              {categoryBreakdown.slice(0, 6).map(({ category, amount }) => (
-                <div key={category} style={{
-                  padding: 12,
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 8,
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '1.5rem', marginBottom: 4 }}>
-                    {CATEGORY_ICONS[category] || '📦'}
-                  </div>
-                  <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
-                    {CATEGORIES.find(c => c.value === category)?.label || category}
-                  </div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>
-                    {formatCurrency(amount)}
-                  </div>
+
+            <form className="bills-form-grid" onSubmit={handleSubmit}>
+              <label className="bills-field">
+                <span>Bill Name</span>
+                <input
+                  className="input"
+                  type="text"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Electricity bill"
+                  required
+                />
+              </label>
+
+              <label className="bills-field">
+                <span>Provider</span>
+                <input
+                  className="input"
+                  type="text"
+                  name="provider"
+                  value={form.provider}
+                  onChange={handleChange}
+                  placeholder="Meralco, Manila Water, Netflix"
+                  required
+                />
+              </label>
+
+              <label className="bills-field">
+                <span>Category</span>
+                <select
+                  className="input"
+                  name="category"
+                  value={form.category}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Select category</option>
+                  {BILL_CATEGORIES.map((category) => (
+                    <option key={category.value} value={category.value}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="bills-field">
+                <span>Due Date</span>
+                <input
+                  className="input"
+                  type="date"
+                  name="dueDate"
+                  value={form.dueDate}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+
+              <label className="bills-field bills-field-wide">
+                <span>Amount</span>
+                <input
+                  className="input"
+                  type="number"
+                  name="amount"
+                  value={form.amount}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </label>
+
+              <div className="bills-form-actions">
+                {editingId ? (
+                  <button className="secondary-btn" type="button" onClick={resetForm}>
+                    Cancel
+                  </button>
+                ) : null}
+                <button className="primary-btn" type="submit" disabled={!isValid || submitting}>
+                  {submitting ? 'Saving...' : editingId ? 'Save Changes' : 'Add Bill'}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <aside className="dashboard-panel">
+            <div className="dashboard-panel-headline">
+              <div>
+                <h2>Billing Snapshot</h2>
+                <p className="bills-panel-copy">
+                  A quick look at your leading bill category and what is coming up next.
+                </p>
+              </div>
+            </div>
+
+            <div className="bills-snapshot-stack">
+              <div className="bills-snapshot-card">
+                <span>Largest Category</span>
+                <strong>{categoryBreakdown[0]?.label || 'No data yet'}</strong>
+              </div>
+              <div className="bills-snapshot-card">
+                <span>Largest Category Amount</span>
+                <strong>{formatCurrency(categoryBreakdown[0]?.amount || 0)}</strong>
+              </div>
+
+              <div className="bills-upcoming-block">
+                <div className="bills-upcoming-head">
+                  <h3>Upcoming Bills</h3>
+                  <small>{upcomingBills.length} showing</small>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        {/* ADD BILL FORM */}
-        <div className="dashboard-panel" style={{ marginBottom: 24 }}>
-          <div className="dashboard-panel-headline">
-            <h2>Add New Bill</h2>
-          </div>
-
-          <form
-            onSubmit={handleSubmit}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: 16,
-              alignItems: 'end'
-            }}
-          >
-            <div>
-              <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
-                Bill Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                placeholder="e.g., Electricity Bill"
-                required
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 4, border: '1px solid #d1d5db' }}
-              />
+                <div className="bills-upcoming-list">
+                  {upcomingBills.length === 0 ? (
+                    <div className="dashboard-empty-state compact">
+                      No upcoming bills yet.
+                    </div>
+                  ) : (
+                    upcomingBills.map((bill) => {
+                      const status = getStatusMeta(bill);
+                      return (
+                        <div key={bill.id} className="bills-upcoming-item">
+                          <SmartItemAvatar
+                            name={bill.name}
+                            provider={bill.provider}
+                            category={bill.category}
+                          />
+                          <div className="bills-upcoming-main">
+                            <strong>{bill.name}</strong>
+                            <small>{formatDate(bill.dueDate)}</small>
+                          </div>
+                          <div className="bills-upcoming-side">
+                            <strong>{formatCurrency(bill.amount)}</strong>
+                            <span className={`bills-status-dot ${status.className}`}>
+                              {status.text}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
             </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
-                Provider *
-              </label>
-              <input
-                type="text"
-                name="provider"
-                value={form.provider}
-                onChange={handleChange}
-                placeholder="e.g., ConEd, Verizon"
-                required
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 4, border: '1px solid #d1d5db' }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
-                Category *
-              </label>
-              <select
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-                required
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 4, border: '1px solid #d1d5db' }}
-              >
-                <option value="">Select Category</option>
-                {CATEGORIES.map(cat => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.icon} {cat.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
-                Due Date *
-              </label>
-              <input
-                type="date"
-                name="dueDate"
-                value={form.dueDate}
-                onChange={handleChange}
-                required
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 4, border: '1px solid #d1d5db' }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
-                Amount *
-              </label>
-              <input
-                type="number"
-                name="amount"
-                value={form.amount}
-                onChange={handleChange}
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-                required
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 4, border: '1px solid #d1d5db' }}
-              />
-            </div>
-
-            <div>
-              <button
-                className="primary-btn"
-                type="submit"
-                disabled={!isValid || submitting}
-                style={{ width: '100%', padding: '10px' }}
-              >
-                {submitting ? 'Saving...' : '💾 Save Bill'}
-              </button>
-            </div>
-          </form>
+          </aside>
         </div>
 
-        {/* BILL HISTORY */}
-        <div className="dashboard-panel">
+        <section className="dashboard-panel">
           <div className="dashboard-panel-headline">
             <div>
               <h2>Bill History</h2>
-              <p style={{ margin: '6px 0 0 0', color: '#6b7280', fontSize: '0.9rem' }}>
-                Showing {filteredBills.length} bill{filteredBills.length === 1 ? '' : 's'}
+              <p className="bills-panel-copy">
+                Showing {filteredBills.length} bill{filteredBills.length === 1 ? '' : 's'} in the current view.
               </p>
             </div>
           </div>
 
-          {/* FILTERS */}
-          <div style={{ display: 'flex', gap: 12, alignItems: 'end', flexWrap: 'wrap', marginBottom: 20 }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
-                Search
-              </label>
+          <div className="bills-toolbar">
+            <label className="bills-filter">
+              <span>Search</span>
               <input
+                className="input"
                 type="text"
-                placeholder="Bill name or provider..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: 4,
-                  border: '1px solid #d1d5db',
-                  fontSize: '0.9rem',
-                  minWidth: 200
-                }}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Bill name or provider"
               />
-            </div>
+            </label>
 
-            <div>
-              <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
-                Category
-              </label>
+            <label className="bills-filter">
+              <span>Category</span>
               <select
+                className="input"
                 value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: 4,
-                  border: '1px solid #d1d5db',
-                  fontSize: '0.9rem',
-                  minWidth: 160
-                }}
+                onChange={(event) => setFilterCategory(event.target.value)}
               >
-                <option value="">All Categories</option>
-                {CATEGORIES.map(cat => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
+                <option value="">All categories</option>
+                {filterCategories.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
 
-            <div>
-              <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
-                Status
-              </label>
+            <label className="bills-filter">
+              <span>Status</span>
               <select
+                className="input"
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: 4,
-                  border: '1px solid #d1d5db',
-                  fontSize: '0.9rem',
-                  minWidth: 140
-                }}
+                onChange={(event) => setFilterStatus(event.target.value)}
               >
-                <option value="">All Status</option>
+                <option value="">All statuses</option>
                 <option value="paid">Paid</option>
                 <option value="unpaid">Unpaid</option>
                 <option value="dueSoon">Due Soon</option>
                 <option value="overdue">Overdue</option>
               </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
-                Date Range
-              </label>
-              <select
-                value={filterDateRange}
-                onChange={(e) => setFilterDateRange(e.target.value)}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: 4,
-                  border: '1px solid #d1d5db',
-                  fontSize: '0.9rem',
-                  minWidth: 140
-                }}
-              >
-                <option value="">All Dates</option>
-                <option value="thisMonth">This Month</option>
-                <option value="lastMonth">Last Month</option>
-                <option value="custom">Custom Range</option>
-              </select>
-            </div>
-
-            {filterDateRange === 'custom' && (
-              <>
-                <div>
-                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
-                    From
-                  </label>
-                  <input
-                    type="date"
-                    value={customDateFrom}
-                    onChange={(e) => setCustomDateFrom(e.target.value)}
-                    style={{
-                      padding: '4px 8px',
-                      borderRadius: 4,
-                      border: '1px solid #d1d5db',
-                      fontSize: '0.9rem'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 500 }}>
-                    To
-                  </label>
-                  <input
-                    type="date"
-                    value={customDateTo}
-                    onChange={(e) => setCustomDateTo(e.target.value)}
-                    style={{
-                      padding: '4px 8px',
-                      borderRadius: 4,
-                      border: '1px solid #d1d5db',
-                      fontSize: '0.9rem'
-                    }}
-                  />
-                </div>
-              </>
-            )}
+            </label>
 
             <button
+              className="secondary-btn bills-reset-btn"
+              type="button"
               onClick={() => {
-                setSearchQuery('')
-                setFilterCategory('')
-                setFilterStatus('')
-                setFilterDateRange('')
-                setCustomDateFrom('')
-                setCustomDateTo('')
-              }}
-              style={{
-                padding: '8px 14px',
-                background: '#6b7280',
-                color: 'white',
-                border: 'none',
-                borderRadius: 8,
-                cursor: 'pointer',
-                fontSize: '0.9rem'
+                setSearchQuery('');
+                setFilterCategory('');
+                setFilterStatus('');
               }}
             >
               Reset
@@ -640,30 +550,19 @@ export default function BillsPage() {
           </div>
 
           {loading ? (
-            <p style={{ textAlign: 'center', padding: 40 }}>Loading bills...</p>
+            <div className="dashboard-empty-state">Loading bills...</div>
           ) : filteredBills.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: 40,
-              opacity: 0.6,
-              border: '2px dashed #e5e7eb',
-              borderRadius: 8
-            }}>
-              <div style={{ fontSize: '3rem', marginBottom: 16 }}>💰</div>
-              <p style={{ fontSize: '1.1rem' }}>
-                {searchQuery || filterCategory.length > 0 || filterStatus.length > 0 || filterDateRange
-                  ? 'No bills match your current filters'
-                  : 'No bills recorded yet'}
-              </p>
-              <p>Start by adding your first bill above!</p>
+            <div className="dashboard-empty-state">
+              {searchQuery || filterCategory || filterStatus
+                ? 'No bills match your current filters.'
+                : 'No bills recorded yet.'}
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="table" style={{ minWidth: '600px' }}>
+            <div className="bills-table-wrap">
+              <table className="table bills-table">
                 <thead>
                   <tr>
-                    <th>Bill Name</th>
-                    <th>Provider</th>
+                    <th>Bill</th>
                     <th>Category</th>
                     <th>Due Date</th>
                     <th>Amount</th>
@@ -673,68 +572,71 @@ export default function BillsPage() {
                 </thead>
                 <tbody>
                   {filteredBills.map((bill) => {
-                    const statusBadge = getStatusBadge(bill)
+                    const status = getStatusMeta(bill);
+
                     return (
                       <tr key={bill.id}>
-                        <td style={{ fontWeight: 600 }}>{bill.name}</td>
-                        <td>{bill.provider}</td>
                         <td>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span>{CATEGORY_ICONS[bill.category] || '📦'}</span>
-                            <span>{CATEGORIES.find(c => c.value === bill.category)?.label || bill.category}</span>
-                          </span>
+                          <div className="bills-table-primary">
+                            <SmartItemAvatar
+                              name={bill.name}
+                              provider={bill.provider}
+                              category={bill.category}
+                            />
+                            <div>
+                              <strong>{bill.name}</strong>
+                              <small>{bill.provider}</small>
+                            </div>
+                          </div>
                         </td>
+                        <td>{getCategoryLabel(bill.category)}</td>
                         <td>{formatDate(bill.dueDate)}</td>
-                        <td style={{ fontWeight: 600 }}>{formatCurrency(bill.amount || 0)}</td>
+                        <td className="bills-amount-cell">{formatCurrency(bill.amount)}</td>
                         <td>
-                          <span className={`badge ${statusBadge.class}`}>
-                            {statusBadge.text}
+                          <span className={`bills-status-chip ${status.className}`}>
+                            {status.text}
                           </span>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            {bill.status !== 'paid' && (
+                          <div className="bills-action-row">
+                            {bill.status !== 'paid' ? (
                               <button
+                                className="primary-btn"
+                                type="button"
                                 onClick={() => handlePay(bill)}
-                                style={{
-                                  padding: '4px 8px',
-                                  background: '#10b981',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: 4,
-                                  cursor: 'pointer',
-                                  fontSize: '0.8rem'
-                                }}
+                                disabled={payingId === bill.id}
                               >
-                                ✅ Pay
+                                {payingId === bill.id ? 'Paying...' : 'Pay'}
                               </button>
-                            )}
+                            ) : null}
                             <button
+                              className="bills-icon-btn edit"
+                              type="button"
+                              onClick={() => handleEdit(bill)}
+                              aria-label={`Edit ${bill.name}`}
+                            >
+                              <PencilLine size={16} />
+                            </button>
+                            <button
+                              className="bills-icon-btn delete"
+                              type="button"
                               onClick={() => handleDelete(bill.id)}
                               disabled={deletingId === bill.id}
-                              style={{
-                                padding: '4px 8px',
-                                background: '#ef4444',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: 4,
-                                cursor: 'pointer',
-                                fontSize: '0.8rem'
-                              }}
+                              aria-label={`Delete ${bill.name}`}
                             >
-                              {deletingId === bill.id ? 'Deleting...' : '🗑️ Delete'}
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         </td>
                       </tr>
-                    )
+                    );
                   })}
                 </tbody>
               </table>
             </div>
           )}
-        </div>
+        </section>
       </div>
     </AppLayout>
-  )
+  );
 }
