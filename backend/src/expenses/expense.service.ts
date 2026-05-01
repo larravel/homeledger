@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 
 import { Expense } from './expense.entity';
 import { CreateExpenseDto } from './dto/create-expense.dto';
+import { UpdateExpenseDto } from './dto/update-expense.dto';
 
 @Injectable()
 export class ExpenseService {
@@ -31,6 +32,25 @@ export class ExpenseService {
       where: { userId },
       order: { date: 'DESC' },
     });
+  }
+
+  async update(userId: number, expenseId: number, updateExpenseDto: UpdateExpenseDto) {
+    const expense = await this.expenseRepository.findOne({
+      where: { id: expenseId, userId },
+    });
+
+    if (!expense) {
+      throw new Error('Expense not found');
+    }
+
+    Object.assign(expense, {
+      category: updateExpenseDto.category ?? expense.category,
+      amount: updateExpenseDto.amount ?? expense.amount,
+      date: updateExpenseDto.date ?? expense.date,
+      description: updateExpenseDto.description ?? expense.description,
+    });
+
+    return this.expenseRepository.save(expense);
   }
 
   async delete(userId: number, expenseId: number) {
