@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, CreditCard, Landmark, Search, ShieldAlert } from 'lucide-react';
+import { Coins, CreditCard, Landmark, Search, ShieldAlert } from 'lucide-react';
 import AppLayout from '../layouts/AppLayout';
 import api from '../services/api';
+import '../styles/payment-history.css';
 import { formatCurrency } from '../utils/format';
+import { SmartItemAvatar } from '../utils/itemVisual';
 import { formatDateByPreference } from '../utils/preferences';
 
 interface Payment {
@@ -23,7 +25,6 @@ export default function PaymentHistoryPage() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('newest');
-  const [openId, setOpenId] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchPayments() {
@@ -46,7 +47,13 @@ export default function PaymentHistoryPage() {
   }, []);
 
   function getBaseAmount(payment: Payment) {
-    return Number(payment.amountPaid ?? payment.bill?.amount ?? 0);
+    if (typeof payment.bill?.amount === 'number') {
+      return Number(payment.bill.amount || 0);
+    }
+
+    const amountPaid = Number(payment.amountPaid ?? 0);
+    const lateFee = Number(payment.lateFee ?? 0);
+    return Math.max(0, amountPaid - lateFee);
   }
 
   function getLateFee(payment: Payment) {
@@ -54,7 +61,7 @@ export default function PaymentHistoryPage() {
   }
 
   function getTotal(payment: Payment) {
-    return getBaseAmount(payment) + getLateFee(payment);
+    return Number(payment.amountPaid ?? getBaseAmount(payment) + getLateFee(payment));
   }
 
   function getMonthKey(date: string) {
@@ -179,7 +186,7 @@ export default function PaymentHistoryPage() {
           <div className="dashboard-stat-box blue">
             <div className="dashboard-stat-top">
               <div className="dashboard-stat-icon-wrap">
-                <CalendarClock size={18} />
+                <Coins size={18} />
               </div>
               <div className="dashboard-stat-title">Average Payment</div>
             </div>
@@ -271,66 +278,38 @@ export default function PaymentHistoryPage() {
 
                     <div className="payments-list">
                       {items.map((payment) => {
-                        const isOpen = openId === payment.id;
-                        const base = getBaseAmount(payment);
-                        const late = getLateFee(payment);
                         const total = getTotal(payment);
+                        const late = getLateFee(payment);
                         const isLate = late > 0;
 
                         return (
                           <div key={payment.id} className="payments-item-shell">
-                            <button
-                              type="button"
-                              className="payments-item"
-                              onClick={() => setOpenId(isOpen ? null : payment.id)}
-                            >
+                            <div className="payments-item">
                               <div className="payments-item-main">
-                                <strong>{payment.bill?.name || 'Unknown Bill'}</strong>
-                                <small>{payment.bill?.provider || 'Unknown Provider'}</small>
+                                <SmartItemAvatar
+                                  name={payment.bill?.name}
+                                  provider={payment.bill?.provider}
+                                />
+                                <div>
+                                  <strong>{payment.bill?.name || 'Unknown Bill'}</strong>
+                                  <small>{payment.bill?.provider || 'Unknown Provider'}</small>
+                                </div>
                               </div>
 
                               <div className="payments-item-date">
-                                {formatDate(payment.paymentDate)}
+                                <div className="payments-item-meta">
+                                  <span className="payments-item-date-label">
+                                    {formatDate(payment.paymentDate)}
+                                  </span>
+                                  <span className={`payments-item-state ${isLate ? 'late' : 'ontime'}`}>
+                                    {isLate ? 'Late' : 'On Time'}
+                                  </span>
+                                </div>
                               </div>
 
                               <div className="payments-item-amount">
                                 <strong>{formatCurrency(total)}</strong>
-                                <span className={isLate ? 'late' : 'ontime'}>
-                                  {isLate ? 'Late Payment' : 'On Time'}
-                                </span>
-                              </div>
-
-                              <span
-                                className={`payments-item-indicator ${isLate ? 'late' : 'ontime'}`}
-                              />
-                            </button>
-
-                            <div className={`payments-item-details ${isOpen ? 'open' : ''}`}>
-                              <div className="payments-item-grid">
-                                <div>
-                                  <span>Bill</span>
-                                  <strong>{payment.bill?.name || '-'}</strong>
-                                </div>
-                                <div>
-                                  <span>Provider</span>
-                                  <strong>{payment.bill?.provider || '-'}</strong>
-                                </div>
-                                <div>
-                                  <span>Bill Amount</span>
-                                  <strong>{formatCurrency(base)}</strong>
-                                </div>
-                                <div>
-                                  <span>Late Fee</span>
-                                  <strong>{formatCurrency(late)}</strong>
-                                </div>
-                                <div>
-                                  <span>Total Paid</span>
-                                  <strong>{formatCurrency(total)}</strong>
-                                </div>
-                                <div>
-                                  <span>Status</span>
-                                  <strong>{isLate ? 'Late' : 'On Time'}</strong>
-                                </div>
+                                <span>Total paid</span>
                               </div>
                             </div>
                           </div>
