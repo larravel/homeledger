@@ -1,25 +1,38 @@
-import { useEffect, useMemo, useState } from 'react'
-import AppLayout from '../layouts/AppLayout'
-import api from '../services/api'
-import { formatCurrency } from '../utils/format'
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react';
+import {
+  CalendarClock,
+  Clock3,
+  CircleAlert,
+  PencilLine,
+  Repeat2,
+  Sparkles,
+  Trash2,
+  WandSparkles,
+} from 'lucide-react';
+import AppLayout from '../layouts/AppLayout';
+import api from '../services/api';
+import '../styles/recurring-bills.css';
+import { formatCurrency } from '../utils/format';
+import { SmartItemAvatar } from '../utils/itemVisual';
+import { formatDateByPreference } from '../utils/preferences';
 
 interface RecurringBill {
-  id: number
-  name: string
-  provider: string
-  amount: number
-  category: string
-  frequency: 'monthly' | 'quarterly'
-  startDate: string
-  lastGenerated: string | null
-  userId: number
-  createdAt: string
-  updatedAt: string
+  id: number;
+  name: string;
+  provider: string;
+  amount: number;
+  category: string;
+  frequency: 'monthly' | 'quarterly';
+  startDate: string;
+  lastGenerated: string | null;
+  userId: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface NoticeState {
-  type: 'success' | 'error'
-  message: string
+  type: 'success' | 'error';
+  message: string;
 }
 
 const CATEGORIES = [
@@ -28,91 +41,98 @@ const CATEGORIES = [
   { value: 'subscription', label: 'Subscriptions' },
   { value: 'loan', label: 'Loans' },
   { value: 'insurance', label: 'Insurance' },
-  { value: 'transportation', label: 'Transportation' },
-  { value: 'healthcare', label: 'Healthcare' },
-  { value: 'education', label: 'Education' },
-]
+];
+
+const LEGACY_CATEGORY_LABELS: Record<string, string> = {
+  transportation: 'Transportation',
+  healthcare: 'Healthcare',
+  education: 'Education',
+};
 
 const FREQUENCIES = [
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'quarterly', label: 'Quarterly' },
-]
+  { value: 'monthly', label: 'Every month' },
+  { value: 'quarterly', label: 'Every 3 months' },
+];
 
-const INPUT_STYLE = {
-  width: '100%',
-  padding: '10px 12px',
-  borderRadius: 10,
-  border: '1px solid #d1d5db',
-  background: '#fff',
-  font: 'inherit',
-} as const
+const DAY_MS = 1000 * 60 * 60 * 24;
 
 const getCycleMonths = (frequency: 'monthly' | 'quarterly') =>
-  frequency === 'monthly' ? 1 : 3
+  frequency === 'monthly' ? 1 : 3;
 
-const parseDate = (value: string) => new Date(`${value}T00:00:00`)
+const parseDate = (value: string) => new Date(`${value}T00:00:00`);
+
+const floorDate = (date: Date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
 const formatDateValue = (date: Date) => {
-  const year = date.getFullYear()
-  const month = `${date.getMonth() + 1}`.padStart(2, '0')
-  const day = `${date.getDate()}`.padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const addMonths = (dateString: string, months: number) => {
-  const nextDate = parseDate(dateString)
-  nextDate.setMonth(nextDate.getMonth() + months)
-  return formatDateValue(nextDate)
-}
+  const nextDate = parseDate(dateString);
+  nextDate.setMonth(nextDate.getMonth() + months);
+  return formatDateValue(nextDate);
+};
 
 const formatDate = (dateString: string | null) => {
-  if (!dateString) return 'Never'
-  const date = new Date(dateString)
-  if (Number.isNaN(date.getTime())) return '-'
+  if (!dateString) return 'Never';
+  return formatDateByPreference(dateString, 'Never');
+};
 
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
+const getFrequencyLabel = (frequency: 'monthly' | 'quarterly') =>
+  frequency === 'monthly' ? 'Every month' : 'Every 3 months';
 
-const getMonthlyEquivalent = (bill: Pick<RecurringBill, 'amount' | 'frequency'>) =>
-  bill.frequency === 'monthly' ? Number(bill.amount) || 0 : (Number(bill.amount) || 0) / 3
-
-const getNextRunDate = (bill: Pick<RecurringBill, 'startDate' | 'lastGenerated' | 'frequency'>) =>
+const getNextRunDate = (
+  bill: Pick<RecurringBill, 'startDate' | 'lastGenerated' | 'frequency'>,
+) =>
   bill.lastGenerated
     ? addMonths(bill.lastGenerated, getCycleMonths(bill.frequency))
-    : bill.startDate
+    : bill.startDate;
 
-const getScheduleStatus = (bill: Pick<RecurringBill, 'startDate' | 'lastGenerated' | 'frequency'>) => {
-  const today = formatDateValue(new Date())
-  const nextRunDate = getNextRunDate(bill)
+function getDueDayCount(dateString: string) {
+  const today = floorDate(new Date());
+  const nextRun = floorDate(parseDate(dateString));
+  return Math.round((nextRun.getTime() - today.getTime()) / DAY_MS);
+}
 
-  if (nextRunDate > today) {
+function getScheduleStatus(
+  bill: Pick<RecurringBill, 'startDate' | 'lastGenerated' | 'frequency'>,
+) {
+  const nextRunDate = getNextRunDate(bill);
+  const diffDays = getDueDayCount(nextRunDate);
+
+  if (diffDays < 0) {
     return {
-      label: bill.lastGenerated ? 'Scheduled' : 'Starts Later',
-      style: { background: '#e0f2fe', color: '#075985' },
-    }
+      text: `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'}`,
+      className: 'overdue',
+    };
   }
-
-  return {
-    label: 'Due Now',
-    style: { background: '#fef3c7', color: '#92400e' },
+  if (diffDays === 0) {
+    return { text: 'Due today', className: 'dueNow' };
   }
+  if (diffDays <= 7) {
+    return {
+      text: `Due in ${diffDays} day${diffDays === 1 ? '' : 's'}`,
+      className: 'dueSoon',
+    };
+  }
+  return { text: 'Scheduled', className: 'scheduled' };
 }
 
 export default function RecurringBillsPage() {
-  const [recurringBills, setRecurringBills] = useState<RecurringBill[]>([])
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [generating, setGenerating] = useState(false)
-  const [deletingId, setDeletingId] = useState<number | null>(null)
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterCategory, setFilterCategory] = useState('')
-  const [filterFrequency, setFilterFrequency] = useState('')
-  const [notice, setNotice] = useState<NoticeState | null>(null)
+  const [recurringBills, setRecurringBills] = useState<RecurringBill[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterFrequency, setFilterFrequency] = useState('');
+  const [notice, setNotice] = useState<NoticeState | null>(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -121,10 +141,10 @@ export default function RecurringBillsPage() {
     category: '',
     frequency: '',
     startDate: '',
-  })
+  });
 
-  const resetForm = () => {
-    setEditingId(null)
+  function resetForm() {
+    setEditingId(null);
     setForm({
       name: '',
       provider: '',
@@ -132,35 +152,37 @@ export default function RecurringBillsPage() {
       category: '',
       frequency: '',
       startDate: '',
-    })
+    });
   }
 
-  const fetchData = async () => {
-    setLoading(true)
+  async function fetchData() {
+    setLoading(true);
     try {
-      const response = await api.get('/recurring-bills')
+      const response = await api.get('/recurring-bills');
       const data = Array.isArray(response.data)
         ? response.data
-        : response.data?.data || []
-      setRecurringBills(data)
-    } catch (err) {
-      console.error('Fetch recurring bills error:', err)
-      setRecurringBills([])
+        : response.data?.data || [];
+      setRecurringBills(data);
+    } catch (error) {
+      console.error('Fetch recurring bills error:', error);
+      setRecurringBills([]);
       setNotice({
         type: 'error',
         message: 'Unable to load recurring bills right now.',
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
+  function handleChange(
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) {
+    setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   }
 
   const isValid =
@@ -169,14 +191,14 @@ export default function RecurringBillsPage() {
     Number(form.amount) > 0 &&
     form.category &&
     form.frequency &&
-    form.startDate
+    form.startDate;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!isValid) return
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!isValid) return;
 
-    setSubmitting(true)
-    setNotice(null)
+    setSubmitting(true);
+    setNotice(null);
 
     const payload = {
       name: form.name.trim(),
@@ -185,39 +207,33 @@ export default function RecurringBillsPage() {
       category: form.category,
       frequency: form.frequency,
       startDate: form.startDate,
-    }
+    };
 
     try {
       if (editingId) {
-        await api.patch(`/recurring-bills/${editingId}`, payload)
-        setNotice({
-          type: 'success',
-          message: 'Recurring bill updated successfully.',
-        })
+        await api.patch(`/recurring-bills/${editingId}`, payload);
+        setNotice({ type: 'success', message: 'Recurring bill updated successfully.' });
       } else {
-        await api.post('/recurring-bills', payload)
-        setNotice({
-          type: 'success',
-          message: 'Recurring bill added successfully.',
-        })
+        await api.post('/recurring-bills', payload);
+        setNotice({ type: 'success', message: 'Recurring bill added successfully.' });
       }
 
-      resetForm()
-      await fetchData()
-    } catch (err) {
-      console.error('Save recurring bill error:', err)
+      resetForm();
+      await fetchData();
+    } catch (error) {
+      console.error('Save recurring bill error:', error);
       setNotice({
         type: 'error',
         message: 'Could not save the recurring bill. Please check your inputs.',
-      })
+      });
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
   }
 
-  const handleEdit = (bill: RecurringBill) => {
-    setEditingId(bill.id)
-    setNotice(null)
+  function handleEdit(bill: RecurringBill) {
+    setEditingId(bill.id);
+    setNotice(null);
     setForm({
       name: bill.name,
       provider: bill.provider,
@@ -225,212 +241,172 @@ export default function RecurringBillsPage() {
       category: bill.category,
       frequency: bill.frequency,
       startDate: bill.startDate,
-    })
+    });
   }
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Delete this recurring bill and stop future bill generation?')) return
+  async function handleDelete(id: number) {
+    if (!window.confirm('Delete this recurring bill and stop future bill generation?')) {
+      return;
+    }
 
-    setDeletingId(id)
-    setNotice(null)
+    setDeletingId(id);
+    setNotice(null);
 
     try {
-      await api.delete(`/recurring-bills/${id}`)
+      await api.delete(`/recurring-bills/${id}`);
       if (editingId === id) {
-        resetForm()
+        resetForm();
       }
-      setNotice({
-        type: 'success',
-        message: 'Recurring bill deleted successfully.',
-      })
-      await fetchData()
-    } catch (err) {
-      console.error('Delete recurring bill error:', err)
-      setNotice({
-        type: 'error',
-        message: 'Could not delete the recurring bill.',
-      })
+      setNotice({ type: 'success', message: 'Recurring bill deleted successfully.' });
+      await fetchData();
+    } catch (error) {
+      console.error('Delete recurring bill error:', error);
+      setNotice({ type: 'error', message: 'Could not delete the recurring bill.' });
     } finally {
-      setDeletingId(null)
+      setDeletingId(null);
     }
   }
 
-  const handleGenerateBills = async () => {
-    setGenerating(true)
-    setNotice(null)
+  async function handleGenerateBills() {
+    setGenerating(true);
+    setNotice(null);
 
     try {
-      const response = await api.post('/recurring-bills/generate')
+      const response = await api.post('/recurring-bills/generate');
       const message =
         typeof response.data?.message === 'string'
           ? response.data.message
-          : 'Recurring bills processed successfully.'
+          : 'Recurring bills processed successfully.';
 
-      setNotice({
-        type: 'success',
-        message,
-      })
-      await fetchData()
-    } catch (err) {
-      console.error('Generate recurring bills error:', err)
+      setNotice({ type: 'success', message });
+      await fetchData();
+    } catch (error) {
+      console.error('Generate recurring bills error:', error);
       setNotice({
         type: 'error',
         message: 'Could not run the recurring billing cycle.',
-      })
+      });
     } finally {
-      setGenerating(false)
+      setGenerating(false);
     }
   }
 
   const filteredBills = useMemo(() => {
     return recurringBills.filter((bill) => {
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase()
-        const matchesSearch =
-          bill.name.toLowerCase().includes(query) ||
-          bill.provider.toLowerCase().includes(query)
-        if (!matchesSearch) return false
+      const query = searchQuery.trim().toLowerCase();
+      if (
+        query &&
+        !bill.name.toLowerCase().includes(query) &&
+        !bill.provider.toLowerCase().includes(query)
+      ) {
+        return false;
       }
 
       if (filterCategory && bill.category !== filterCategory) {
-        return false
+        return false;
       }
 
       if (filterFrequency && bill.frequency !== filterFrequency) {
-        return false
+        return false;
       }
 
-      return true
-    })
-  }, [recurringBills, searchQuery, filterCategory, filterFrequency])
+      return true;
+    });
+  }, [filterCategory, filterFrequency, recurringBills, searchQuery]);
 
-  const totalRecurringBills = filteredBills.length
-
-  const monthlyCommitment = useMemo(
-    () => filteredBills.reduce((sum, bill) => sum + getMonthlyEquivalent(bill), 0),
+  const dueThisMonth = useMemo(
+    () =>
+      filteredBills.filter((bill) => {
+        const date = parseDate(getNextRunDate(bill));
+        const today = new Date();
+        return (
+          date.getMonth() === today.getMonth() &&
+          date.getFullYear() === today.getFullYear()
+        );
+      }),
     [filteredBills],
-  )
+  );
 
-  const dueNowCount = useMemo(() => {
-    const today = formatDateValue(new Date())
-    return filteredBills.filter((bill) => getNextRunDate(bill) <= today).length
-  }, [filteredBills])
-
-  const categoryCount = useMemo(
-    () => new Set(filteredBills.map((bill) => bill.category)).size,
+  const dueNowBills = useMemo(
+    () => filteredBills.filter((bill) => getDueDayCount(getNextRunDate(bill)) <= 0),
     [filteredBills],
-  )
+  );
 
-  const annualProjection = monthlyCommitment * 12
+  const dueThisWeekBills = useMemo(
+    () =>
+      filteredBills.filter((bill) => {
+        const diff = getDueDayCount(getNextRunDate(bill));
+        return diff >= 0 && diff <= 7;
+      }),
+    [filteredBills],
+  );
 
-  const nextUpcomingRun = useMemo(() => {
-    if (filteredBills.length === 0) return null
+  const dueThisMonthTotal = useMemo(
+    () => dueThisMonth.reduce((sum, bill) => sum + Number(bill.amount || 0), 0),
+    [dueThisMonth],
+  );
 
-    return [...filteredBills]
-      .map((bill) => getNextRunDate(bill))
-      .sort((a, b) => a.localeCompare(b))[0]
-  }, [filteredBills])
+
 
   const categoryBreakdown = useMemo(() => {
-    const breakdown: Record<string, number> = {}
+    const breakdown: Record<string, number> = {};
 
     filteredBills.forEach((bill) => {
-      breakdown[bill.category] = (breakdown[bill.category] || 0) + getMonthlyEquivalent(bill)
-    })
+      breakdown[bill.category] = (breakdown[bill.category] || 0) + Number(bill.amount || 0);
+    });
 
     return Object.entries(breakdown)
       .map(([category, amount]) => ({
         category,
-        label: CATEGORIES.find((item) => item.value === category)?.label || category,
+        label:
+          CATEGORIES.find((item) => item.value === category)?.label ||
+          LEGACY_CATEGORY_LABELS[category] ||
+          category,
         amount,
       }))
-      .sort((a, b) => b.amount - a.amount)
-  }, [filteredBills])
+      .sort((left, right) => right.amount - left.amount);
+  }, [filteredBills]);
+
+  const filterCategories = useMemo(() => {
+    const categories = new Set<string>(CATEGORIES.map((item) => item.value));
+    recurringBills.forEach((bill) => categories.add(bill.category));
+
+    return [...categories].map((value) => ({
+      value,
+      label: CATEGORIES.find((item) => item.value === value)?.label || LEGACY_CATEGORY_LABELS[value] || value,
+    }));
+  }, [recurringBills]);
+
+  const upcomingBills = useMemo(
+    () =>
+      [...filteredBills]
+        .sort((left, right) => getNextRunDate(left).localeCompare(getNextRunDate(right)))
+        .slice(0, 4),
+    [filteredBills],
+  );
+
+  const topCategoryLabel =
+    categoryBreakdown[0]?.label || 'No recurring bills yet';
 
   return (
     <AppLayout>
-      <div className="page-container">
-        <div
-          className="panel"
-          style={{
-            marginBottom: 24,
-            background:
-              'linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(37, 99, 235, 0.92))',
-            color: 'white',
-            overflow: 'hidden',
-            position: 'relative',
-          }}
-        >
-          <div
-            style={{
-              position: 'absolute',
-              inset: 'auto -80px -120px auto',
-              width: 260,
-              height: 260,
-              borderRadius: '50%',
-              background: 'rgba(255, 255, 255, 0.08)',
-            }}
-          />
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 20,
-              flexWrap: 'wrap',
-              position: 'relative',
-            }}
-          >
-            <div style={{ maxWidth: 720 }}>
-              <p
-                style={{
-                  margin: '0 0 8px 0',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  fontSize: '0.8rem',
-                  opacity: 0.8,
-                }}
-              >
-                Recurring Billing Control Center
-              </p>
-              <h1 style={{ margin: '0 0 10px 0', fontSize: '2rem' }}>Recurring Bills</h1>
-              <p style={{ margin: 0, fontSize: '1rem', lineHeight: 1.6, opacity: 0.9 }}>
-                Manage subscriptions, rent, utilities, and other repeating obligations from one
-                schedule-aware workspace. Generate due bills on demand and keep the monthly
-                commitment view current.
-              </p>
-            </div>
+      <div className="dashboard-screen">
+        <div className="dashboard-screen-header recurring-header">
+          <div>
+            <h1>Recurring Bills</h1>
+            <p>Manage repeating bills and see what is scheduled next.</p>
+          </div>
 
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="primary-btn"
-                onClick={handleGenerateBills}
-                disabled={generating}
-                style={{
-                  background: 'white',
-                  color: '#0f172a',
-                  minWidth: 180,
-                  fontWeight: 700,
-                }}
-              >
-                {generating ? 'Running cycle...' : 'Generate Due Bills'}
-              </button>
-              {editingId && (
-                <button
-                  type="button"
-                  className="secondary-btn"
-                  onClick={resetForm}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.16)',
-                    color: 'white',
-                    border: '1px solid rgba(255, 255, 255, 0.18)',
-                  }}
-                >
-                  Cancel Edit
-                </button>
-              )}
-            </div>
+          <div className="recurring-header-actions">
+            <button
+              type="button"
+              className="primary-btn recurring-generate-btn"
+              onClick={handleGenerateBills}
+              disabled={generating}
+            >
+              <WandSparkles size={16} />
+              {generating ? 'Running cycle...' : 'Generate Due Bills'}
+            </button>
           </div>
         </div>
 
@@ -440,120 +416,94 @@ export default function RecurringBillsPage() {
           </div>
         )}
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: 16,
-            marginBottom: 24,
-          }}
-        >
-          <div className="panel">
-            <h4 style={{ margin: 0, fontSize: '0.85rem', opacity: 0.65 }}>Active Schedules</h4>
-            <p style={{ margin: '8px 0 0 0', fontSize: '1.9rem', fontWeight: 700 }}>
-              {totalRecurringBills}
-            </p>
+        <div className="dashboard-card-grid">
+          <div className="dashboard-stat-box blue">
+            <div className="dashboard-stat-top">
+              <div className="dashboard-stat-icon-wrap">
+                <Repeat2 size={18} />
+              </div>
+              <div className="dashboard-stat-title">Active Recurring Bills</div>
+            </div>
+            <div className="dashboard-stat-value">{filteredBills.length}</div>
           </div>
 
-          <div className="panel">
-            <h4 style={{ margin: 0, fontSize: '0.85rem', opacity: 0.65 }}>Monthly Commitment</h4>
-            <p style={{ margin: '8px 0 0 0', fontSize: '1.9rem', fontWeight: 700 }}>
-              {formatCurrency(monthlyCommitment)}
-            </p>
+          <div className="dashboard-stat-box green">
+            <div className="dashboard-stat-top">
+              <div className="dashboard-stat-icon-wrap">
+                <CalendarClock size={18} />
+              </div>
+              <div className="dashboard-stat-title">Due This Month</div>
+            </div>
+            <div className="dashboard-stat-value">{formatCurrency(dueThisMonthTotal)}</div>
           </div>
 
-          <div className="panel">
-            <h4 style={{ margin: 0, fontSize: '0.85rem', opacity: 0.65 }}>Due Right Now</h4>
-            <p style={{ margin: '8px 0 0 0', fontSize: '1.9rem', fontWeight: 700 }}>{dueNowCount}</p>
+          <div className="dashboard-stat-box gold">
+            <div className="dashboard-stat-top">
+              <div className="dashboard-stat-icon-wrap">
+                <Clock3 size={18} />
+              </div>
+              <div className="dashboard-stat-title">Due This Week</div>
+            </div>
+            <div className="dashboard-stat-value">{dueThisWeekBills.length}</div>
           </div>
 
-          <div className="panel">
-            <h4 style={{ margin: 0, fontSize: '0.85rem', opacity: 0.65 }}>Annual Projection</h4>
-            <p style={{ margin: '8px 0 0 0', fontSize: '1.9rem', fontWeight: 700 }}>
-              {formatCurrency(annualProjection)}
-            </p>
+          <div className="dashboard-stat-box blue">
+            <div className="dashboard-stat-top">
+              <div className="dashboard-stat-icon-wrap">
+                <CircleAlert size={18} />
+              </div>
+              <div className="dashboard-stat-title">Needs Attention</div>
+            </div>
+            <div className="dashboard-stat-value">{dueNowBills.length}</div>
           </div>
         </div>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 2fr) minmax(280px, 1fr)',
-            gap: 20,
-            marginBottom: 24,
-          }}
-        >
-          <div className="panel">
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 12,
-                marginBottom: 16,
-                flexWrap: 'wrap',
-              }}
-            >
+        <div className="recurring-workspace-grid">
+          <section className="dashboard-panel">
+            <div className="dashboard-panel-headline">
               <div>
-                <h3 style={{ margin: 0 }}>{editingId ? 'Edit Recurring Bill' : 'Add Recurring Bill'}</h3>
-                <p style={{ margin: '6px 0 0 0', color: '#6b7280' }}>
-                  Set the cadence once and let HomeLedger keep the cycle organized.
+                <h2>{editingId ? 'Edit Recurring Bill' : 'Add Recurring Bill'}</h2>
+                <p className="bills-panel-copy">
+                  Set the charge, start date, and repeat cycle.
                 </p>
               </div>
-              <span
-                className="badge"
-                style={{
-                  background: editingId ? '#dbeafe' : '#dcfce7',
-                  color: editingId ? '#1d4ed8' : '#166534',
-                }}
-              >
-                {editingId ? 'Edit Mode' : 'Automation Ready'}
-              </span>
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: 16,
-                alignItems: 'end',
-              }}
-            >
-              <div>
-                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Bill Name *</label>
+            <form className="bills-form-grid" onSubmit={handleSubmit}>
+              <label className="bills-field">
+                <span>Bill Name</span>
                 <input
+                  className="input"
                   type="text"
                   name="name"
                   value={form.name}
                   onChange={handleChange}
                   placeholder="Internet service"
                   required
-                  style={INPUT_STYLE}
                 />
-              </div>
+              </label>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Provider *</label>
+              <label className="bills-field">
+                <span>Provider</span>
                 <input
+                  className="input"
                   type="text"
                   name="provider"
                   value={form.provider}
                   onChange={handleChange}
                   placeholder="Provider name"
                   required
-                  style={INPUT_STYLE}
                 />
-              </div>
+              </label>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Category *</label>
+              <label className="bills-field">
+                <span>Category</span>
                 <select
+                  className="input"
                   name="category"
                   value={form.category}
                   onChange={handleChange}
                   required
-                  style={INPUT_STYLE}
                 >
                   <option value="">Select category</option>
                   {CATEGORIES.map((category) => (
@@ -562,41 +512,42 @@ export default function RecurringBillsPage() {
                     </option>
                   ))}
                 </select>
-              </div>
+              </label>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Frequency *</label>
+              <label className="bills-field">
+                <span>Repeats</span>
                 <select
+                  className="input"
                   name="frequency"
                   value={form.frequency}
                   onChange={handleChange}
                   required
-                  style={INPUT_STYLE}
                 >
-                  <option value="">Select frequency</option>
+                  <option value="">Select repeat option</option>
                   {FREQUENCIES.map((frequency) => (
                     <option key={frequency.value} value={frequency.value}>
                       {frequency.label}
                     </option>
                   ))}
                 </select>
-              </div>
+              </label>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Start Date *</label>
+              <label className="bills-field">
+                <span>Start Date</span>
                 <input
+                  className="input"
                   type="date"
                   name="startDate"
                   value={form.startDate}
                   onChange={handleChange}
                   required
-                  style={INPUT_STYLE}
                 />
-              </div>
+              </label>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Amount *</label>
+              <label className="bills-field">
+                <span>Charge Amount</span>
                 <input
+                  className="input"
                   type="number"
                   name="amount"
                   value={form.amount}
@@ -605,374 +556,300 @@ export default function RecurringBillsPage() {
                   min="0"
                   step="0.01"
                   required
-                  style={INPUT_STYLE}
                 />
-              </div>
+              </label>
 
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <div className="bills-form-actions">
+                {editingId && (
+                  <button type="button" className="secondary-btn" onClick={resetForm}>
+                    Cancel
+                  </button>
+                )}
+
                 <button
                   className="primary-btn"
                   type="submit"
                   disabled={!isValid || submitting}
-                  style={{ minWidth: 150 }}
                 >
                   {submitting
                     ? 'Saving...'
                     : editingId
-                      ? 'Update Schedule'
-                      : 'Save Schedule'}
+                      ? 'Update Recurring Bill'
+                      : 'Save Recurring Bill'}
                 </button>
-
-                {editingId && (
-                  <button
-                    type="button"
-                    className="secondary-btn"
-                    onClick={resetForm}
-                  >
-                    Cancel
-                  </button>
-                )}
               </div>
             </form>
-          </div>
+          </section>
 
-          <div className="panel">
-            <h3 style={{ marginTop: 0, marginBottom: 16 }}>Portfolio Snapshot</h3>
-
-            <div style={{ display: 'grid', gap: 12 }}>
-              <div
-                style={{
-                  padding: 14,
-                  borderRadius: 14,
-                  background: '#f8fafc',
-                  border: '1px solid #e5e7eb',
-                }}
-              >
-                <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 6 }}>
-                  Next upcoming run
-                </div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
-                  {nextUpcomingRun ? formatDate(nextUpcomingRun) : 'No schedules yet'}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  padding: 14,
-                  borderRadius: 14,
-                  background: '#f8fafc',
-                  border: '1px solid #e5e7eb',
-                }}
-              >
-                <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 6 }}>
-                  Categories covered
-                </div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{categoryCount}</div>
-              </div>
-
-              <div
-                style={{
-                  padding: 14,
-                  borderRadius: 14,
-                  background: '#f8fafc',
-                  border: '1px solid #e5e7eb',
-                }}
-              >
-                <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 10 }}>
-                  Highest monthly load
-                </div>
-                {categoryBreakdown.length > 0 ? (
-                  <div>
-                    <div style={{ fontSize: '1rem', fontWeight: 700 }}>
-                      {categoryBreakdown[0].label}
-                    </div>
-                    <div style={{ color: '#475569' }}>
-                      {formatCurrency(categoryBreakdown[0].amount)} / month
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ color: '#64748b' }}>Add a schedule to see category insights.</div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {categoryBreakdown.length > 0 && (
-          <div className="panel" style={{ marginBottom: 24 }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 12,
-                marginBottom: 16,
-                flexWrap: 'wrap',
-              }}
-            >
+          <section className="dashboard-panel recurring-side-panel">
+            <div className="dashboard-panel-headline">
               <div>
-                <h3 style={{ margin: 0 }}>Monthly Cost Mix</h3>
-                <p style={{ margin: '6px 0 0 0', color: '#6b7280' }}>
-                  Normalized monthly cost by recurring bill category.
+                <h2>Recurring Snapshot</h2>
+                <p className="bills-panel-copy">
+                  A quick view of this month’s recurring total and leading category.
                 </p>
               </div>
             </div>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                gap: 14,
-              }}
-            >
+            <div className="recurring-snapshot-stack">
+              <div className="recurring-summary-board">
+                <div className="recurring-summary-card">
+                  <span>Scheduled this month</span>
+                  <strong>{formatCurrency(dueThisMonthTotal)}</strong>
+                </div>
+
+                <div className="recurring-summary-card">
+                  <span>Leading category</span>
+                  <strong>{topCategoryLabel}</strong>
+                </div>
+              </div>
+
+              <div className="bills-upcoming-block">
+                <div className="bills-upcoming-head">
+                  <h3>Upcoming Next</h3>
+                  <small>{upcomingBills.length} scheduled</small>
+                </div>
+
+                {upcomingBills.length === 0 ? (
+                  <div className="dashboard-empty-state compact">
+                    No upcoming recurring bills yet.
+                  </div>
+                ) : (
+                  <div className="bills-upcoming-list">
+                    {upcomingBills.map((bill) => {
+                      const status = getScheduleStatus(bill);
+
+                      return (
+                        <div key={bill.id} className="bills-upcoming-item">
+                          <SmartItemAvatar
+                            name={bill.name}
+                            provider={bill.provider}
+                            category={bill.category}
+                          />
+
+                          <div className="bills-upcoming-main">
+                            <strong>{bill.name}</strong>
+                            <small>
+                              {formatDate(getNextRunDate(bill))} • {getFrequencyLabel(bill.frequency)}
+                            </small>
+                          </div>
+
+                          <div className="bills-upcoming-side">
+                            <strong>{formatCurrency(Number(bill.amount || 0))}</strong>
+                            <span className={`bills-status-dot ${status.className}`}>
+                              {status.text}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section className="dashboard-panel">
+          <div className="dashboard-panel-headline">
+              <div>
+                <h2>Category Distribution</h2>
+                <p className="bills-panel-copy">
+                  See which categories take the biggest share of recurring charges.
+                </p>
+              </div>
+            </div>
+
+          {categoryBreakdown.length === 0 ? (
+            <div className="dashboard-empty-state compact">
+              No recurring bill data yet.
+            </div>
+          ) : (
+            <div className="recurring-mix-grid">
               {categoryBreakdown.map((item) => {
-                const share = monthlyCommitment > 0 ? (item.amount / monthlyCommitment) * 100 : 0
+                const total = categoryBreakdown.reduce((sum, row) => sum + row.amount, 0);
+                const share = total > 0 ? (item.amount / total) * 100 : 0;
+
                 return (
-                  <div
-                    key={item.category}
-                    style={{
-                      padding: 16,
-                      borderRadius: 16,
-                      border: '1px solid #e5e7eb',
-                      background: 'linear-gradient(180deg, #ffffff, #f8fafc)',
-                    }}
-                  >
-                    <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 8 }}>
-                      {item.label}
-                    </div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 10 }}>
-                      {formatCurrency(item.amount)}
-                    </div>
-                    <div
-                      style={{
-                        width: '100%',
-                        height: 8,
-                        borderRadius: 999,
-                        background: '#e2e8f0',
-                        overflow: 'hidden',
-                        marginBottom: 8,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${Math.min(share, 100)}%`,
-                          height: '100%',
-                          borderRadius: 999,
-                          background: 'linear-gradient(90deg, #0f172a, #2563eb)',
-                        }}
+                  <div key={item.category} className="recurring-mix-card">
+                    <div className="recurring-mix-label">{item.label}</div>
+                    <div className="recurring-mix-value">{formatCurrency(item.amount)}</div>
+                    <div className="recurring-mix-track">
+                      <span
+                        className="recurring-mix-fill"
+                        style={{ width: `${Math.min(share, 100)}%` }}
                       />
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                      {share.toFixed(0)}% of monthly recurring load
+                    <div className="recurring-mix-share">
+                      {share.toFixed(0)}% of scheduled charges
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
+          )}
+        </section>
+
+        <section className="dashboard-panel">
+          <div className="dashboard-panel-headline">
+              <div>
+                <h2>Recurring Bill List</h2>
+                <p className="bills-panel-copy">
+                  Showing {filteredBills.length} recurring bill{filteredBills.length === 1 ? '' : 's'} in this view.
+                </p>
+              </div>
+            <div className="recurring-list-meta">
+              <Sparkles size={16} />
+              Recurring schedule tracker
+            </div>
           </div>
-        )}
 
-        <div className="panel">
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: 16,
-              marginBottom: 20,
-            }}
-          >
-            <div>
-              <h3 style={{ margin: 0 }}>Recurring Bill Portfolio</h3>
-              <p style={{ margin: '6px 0 0 0', color: '#6b7280', fontSize: '0.9rem' }}>
-                Showing {filteredBills.length} schedule{filteredBills.length === 1 ? '' : 's'}
-              </p>
-            </div>
+          <div className="bills-toolbar">
+            <label className="bills-filter">
+              <span>Search</span>
+              <input
+                className="input"
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Bill or provider"
+              />
+            </label>
 
-            <div style={{ display: 'flex', gap: 12, alignItems: 'end', flexWrap: 'wrap' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 600 }}>
-                  Search
-                </label>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Bill or provider"
-                  style={{ ...INPUT_STYLE, minWidth: 220, padding: '8px 10px' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 600 }}>
-                  Category
-                </label>
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  style={{ ...INPUT_STYLE, minWidth: 180, padding: '8px 10px' }}
-                >
-                  <option value="">All categories</option>
-                  {CATEGORIES.map((category) => (
-                    <option key={category.value} value={category.value}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem', fontWeight: 600 }}>
-                  Frequency
-                </label>
-                <select
-                  value={filterFrequency}
-                  onChange={(e) => setFilterFrequency(e.target.value)}
-                  style={{ ...INPUT_STYLE, minWidth: 160, padding: '8px 10px' }}
-                >
-                  <option value="">All frequencies</option>
-                  {FREQUENCIES.map((frequency) => (
-                    <option key={frequency.value} value={frequency.value}>
-                      {frequency.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="button"
-                className="secondary-btn"
-                onClick={() => {
-                  setSearchQuery('')
-                  setFilterCategory('')
-                  setFilterFrequency('')
-                }}
+            <label className="bills-filter">
+              <span>Category</span>
+              <select
+                className="input"
+                value={filterCategory}
+                onChange={(event) => setFilterCategory(event.target.value)}
               >
-                Reset
-              </button>
-            </div>
+                <option value="">All categories</option>
+                {filterCategories.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="bills-filter">
+              <span>Repeats</span>
+              <select
+                className="input"
+                value={filterFrequency}
+                onChange={(event) => setFilterFrequency(event.target.value)}
+              >
+                <option value="">All repeat options</option>
+                {FREQUENCIES.map((frequency) => (
+                  <option key={frequency.value} value={frequency.value}>
+                    {frequency.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button
+              type="button"
+              className="secondary-btn bills-reset-btn"
+              onClick={() => {
+                setSearchQuery('');
+                setFilterCategory('');
+                setFilterFrequency('');
+              }}
+            >
+              Reset
+            </button>
           </div>
 
           {loading ? (
-            <p style={{ textAlign: 'center', padding: 40 }}>Loading recurring bills...</p>
+            <div className="dashboard-empty-state">Loading recurring bills...</div>
           ) : filteredBills.length === 0 ? (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: 48,
-                border: '2px dashed #e5e7eb',
-                borderRadius: 16,
-                color: '#6b7280',
-              }}
-            >
-              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#111827', marginBottom: 8 }}>
-                No recurring bills found
-              </div>
-              <p style={{ margin: 0 }}>
-                {searchQuery || filterCategory || filterFrequency
-                  ? 'Try adjusting the current filters.'
-                  : 'Create your first recurring bill to automate future billing cycles.'}
-              </p>
+            <div className="dashboard-empty-state">
+              {searchQuery || filterCategory || filterFrequency
+                ? 'No recurring bills match your current filters.'
+                : 'Create your first recurring bill to automate future billing cycles.'}
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="table" style={{ minWidth: '980px' }}>
+            <div className="table-wrap bills-table-wrap">
+              <table className="table bills-table recurring-portfolio-table">
                 <thead>
                   <tr>
                     <th>Bill</th>
-                    <th>Category</th>
-                    <th>Cadence</th>
+                    <th>Repeats</th>
+                    <th>Charge Amount</th>
                     <th>Start Date</th>
-                    <th>Next Run</th>
-                    <th>Last Generated</th>
-                    <th>Monthly Equivalent</th>
+                    <th>Next Bill Date</th>
+                    <th>Status</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredBills.map((bill) => {
-                    const categoryLabel =
-                      CATEGORIES.find((category) => category.value === bill.category)?.label ||
-                      bill.category
-                    const scheduleStatus = getScheduleStatus(bill)
-                    const nextRunDate = getNextRunDate(bill)
+                    const nextRunDate = getNextRunDate(bill);
+                    const status = getScheduleStatus(bill);
 
                     return (
                       <tr key={bill.id}>
                         <td>
-                          <div style={{ display: 'grid', gap: 4 }}>
-                            <span style={{ fontWeight: 700 }}>{bill.name}</span>
-                            <span style={{ color: '#6b7280', fontSize: '0.9rem' }}>{bill.provider}</span>
+                          <div className="bills-table-primary recurring-bill-cell">
+                            <SmartItemAvatar
+                              name={bill.name}
+                              provider={bill.provider}
+                              category={bill.category}
+                            />
+                            <div>
+                              <strong>{bill.name}</strong>
+                              <small>{bill.provider}</small>
+                            </div>
                           </div>
                         </td>
-                        <td>{categoryLabel}</td>
                         <td>
-                          <span
-                            className="badge"
-                            style={{
-                              background: bill.frequency === 'monthly' ? '#dbeafe' : '#ede9fe',
-                              color: bill.frequency === 'monthly' ? '#1d4ed8' : '#6d28d9',
-                            }}
-                          >
-                            {bill.frequency === 'monthly' ? 'Monthly' : 'Quarterly'}
+                          <span className="recurring-frequency-label">
+                            {getFrequencyLabel(bill.frequency)}
                           </span>
+                        </td>
+                        <td className="bills-amount-cell">
+                          {formatCurrency(Number(bill.amount || 0))}
                         </td>
                         <td>{formatDate(bill.startDate)}</td>
                         <td>
-                          <div style={{ display: 'grid', gap: 6 }}>
-                            <span style={{ fontWeight: 600 }}>{formatDate(nextRunDate)}</span>
-                            <span className="badge" style={scheduleStatus.style}>
-                              {scheduleStatus.label}
-                            </span>
-                          </div>
+                          <span className="recurring-next-run">{formatDate(nextRunDate)}</span>
                         </td>
-                        <td>{formatDate(bill.lastGenerated)}</td>
-                        <td style={{ fontWeight: 700 }}>{formatCurrency(getMonthlyEquivalent(bill))}</td>
                         <td>
-                          <div style={{ display: 'flex', gap: 8 }}>
+                          <span className={`bills-status-chip ${status.className}`}>
+                            {status.text}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="bills-action-row">
                             <button
                               type="button"
+                              className="bills-icon-btn edit"
                               onClick={() => handleEdit(bill)}
-                              style={{
-                                padding: '6px 10px',
-                                background: '#2563eb',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: 8,
-                                cursor: 'pointer',
-                                fontSize: '0.85rem',
-                              }}
+                              aria-label={`Edit ${bill.name}`}
                             >
-                              Edit
+                              <PencilLine size={15} />
                             </button>
                             <button
                               type="button"
+                              className="bills-icon-btn delete"
                               onClick={() => handleDelete(bill.id)}
                               disabled={deletingId === bill.id}
-                              style={{
-                                padding: '6px 10px',
-                                background: '#ef4444',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: 8,
-                                cursor: 'pointer',
-                                fontSize: '0.85rem',
-                              }}
+                              aria-label={`Delete ${bill.name}`}
                             >
-                              {deletingId === bill.id ? 'Deleting...' : 'Delete'}
+                              <Trash2 size={15} />
                             </button>
                           </div>
                         </td>
                       </tr>
-                    )
+                    );
                   })}
                 </tbody>
               </table>
             </div>
           )}
-        </div>
+        </section>
       </div>
     </AppLayout>
-  )
+  );
 }
