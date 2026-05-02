@@ -1,42 +1,49 @@
-import { NavLink, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import {
+  CalendarSync,
+  ChartColumnIncreasing,
+  HandCoins,
+  Home,
+  Menu,
+  Receipt,
+  Settings2,
+  Wallet,
+} from 'lucide-react';
 
 export default function Sidebar() {
-  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
-
-  function handleLogout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
-  }
 
   const linkStyle = ({ isActive }: { isActive: boolean }) => ({
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
-    padding: '12px 14px',
-    borderRadius: '10px',
+    gap: '12px',
+    padding: '11px 14px',
+    borderRadius: '15px',
     textDecoration: 'none',
-    color: 'white',
-    background: isActive ? 'rgba(255,255,255,0.12)' : 'transparent',
-    fontWeight: 500,
+    color: 'rgba(255,255,255,0.92)',
+    background: isActive
+      ? 'linear-gradient(90deg, rgba(18,34,77,1), rgba(32,73,164,0.96))'
+      : 'transparent',
+    fontWeight: 600,
+    fontSize: '0.92rem',
+    boxShadow: isActive ? '0 16px 30px rgba(8, 18, 44, 0.42)' : 'none',
   });
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-
-      {/* 🔥 BRAND / TOGGLE */}
       <div className="brand">
         <button
           className="toggle-btn"
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => setCollapsed((value) => !value)}
+          aria-label="Toggle sidebar"
+          type="button"
         >
-          ☰
+          <Menu size={18} />
         </button>
 
         {!collapsed && (
-          <div>
+          <div className="brand-copy">
             <div className="brand-title">HomeLedger</div>
             <div className="brand-subtitle">
               Household Billing & Expense Manager
@@ -45,37 +52,49 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* NAV */}
       <nav className="sidebar-nav">
         <NavLink to="/dashboard" style={linkStyle}>
-          📊 {!collapsed && 'Dashboard'}
+          <Home size={18} />
+          {!collapsed && 'Dashboard'}
         </NavLink>
 
         <NavLink to="/bills" style={linkStyle}>
-          🧾 {!collapsed && 'Bills'}
+          <Receipt size={18} />
+          {!collapsed && 'Bills'}
         </NavLink>
 
         <NavLink to="/payments" style={linkStyle}>
-          💳 {!collapsed && 'Payments'}
+          <Wallet size={18} />
+          {!collapsed && 'Payment History'}
+        </NavLink>
+
+        <NavLink to="/recurring-bills" style={linkStyle}>
+          <CalendarSync size={18} />
+          {!collapsed && 'Recurring Bills'}
+        </NavLink>
+
+        <NavLink to="/expenses" style={linkStyle}>
+          <HandCoins size={18} />
+          {!collapsed && 'Expenses'}
         </NavLink>
 
         <NavLink to="/budgeting" style={linkStyle}>
-          ?? {!collapsed && 'Budgeting'}
-        </NavLink>
-
-        <NavLink to="/utility-usage" style={linkStyle}>
-          ⚡ {!collapsed && 'Utilities'}
+          <ChartColumnIncreasing size={18} />
+          {!collapsed && 'Budgeting'}
         </NavLink>
 
         <NavLink to="/settings" style={linkStyle}>
-          ⚙️ {!collapsed && 'Settings'}
+          <Settings2 size={18} />
+          {!collapsed && 'Settings'}
         </NavLink>
       </nav>
 
-      {/* LOGOUT */}
-      <button className="logout-btn" onClick={handleLogout}>
-        {!collapsed ? 'Logout' : '🚪'}
-      </button>
+      {!collapsed && (
+        <div className="sidebar-footer">
+          <span>HomeLedger</span>
+          <small>Personal finance workspace</small>
+        </div>
+      )}
     </aside>
   );
 }
