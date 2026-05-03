@@ -13,6 +13,7 @@ import {
   Receipt,
   ShieldCheck,
   ShoppingBag,
+  ShoppingCart,
   Smartphone,
   Tv,
   UtensilsCrossed,
@@ -153,7 +154,7 @@ export function getSmartItemVisual({
     return { type: 'icon', icon: createElement(GraduationCap, { size: 16 }) };
   }
   if (source.includes('grocery')) {
-    return { type: 'icon', icon: createElement(ShoppingBag, { size: 16 }) };
+    return { type: 'icon', icon: createElement(ShoppingCart, { size: 16 }) };
   }
   if (source.includes('dining') || source.includes('restaurant') || source.includes('food')) {
     return { type: 'icon', icon: createElement(UtensilsCrossed, { size: 16 }) };
