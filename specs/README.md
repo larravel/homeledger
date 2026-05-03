@@ -1,19 +1,26 @@
-# HomeLedger Spec Files
+# HomeLedger Specification Index
 
-This folder contains the structured specification for the HomeLedger – Household Billing & Expense Manager system.
+These files document the final scope and reviewable evidence for the HomeLedger submission.
 
-## Files
+## Core Spec Files
 
-- 00-context.md → Project context and overview
-- 10-requirements.md → Functional and non-functional requirements
-- 20-api.md → API endpoints design
-- 30-invariants.md → System rules and constraints
-- 40-acceptance.md → Acceptance criteria
-- 50-edge-cases.md → Edge case scenarios
-- decisions.md → Technical decisions made
-- submission-reflection.md → Reflection on the work
+- `00-context.md` — project context and problem
+- `10-requirements.md` — final scope, non-goals, and requirements
+- `20-api.md` — main backend endpoint groups
+- `30-invariants.md` — rules the system should preserve
+- `40-acceptance.md` — acceptance criteria for the final app scope
+- `50-edge-cases.md` — key edge cases that matter for review
 
-## Notes
+## Submission Evidence Files
 
-This spec follows a spec-driven development approach.  
-No test cases are implemented yet — only framework setup and planning.
+- `60-validation.md` — repeatable validation commands and current status
+- `70-traceability.md` — requirement-to-code-to-validation mapping
+- `submission-reflection.md` — brief review/reflection including AI use
+
+## Reviewer Note
+
+The final grading evidence is meant to be visible directly in the repository. These files are written to make it easy to review:
+
+- what the app was supposed to do
+- where it is implemented
+- how it was checked
