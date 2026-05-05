@@ -5,6 +5,7 @@ import {
   getStoredPreferences,
   PREFERENCES_EVENT,
 } from '../utils/preferences';
+import { fetchUserSettings } from '../utils/settings';
 
 interface AppLayoutProps {
   title?: string;
@@ -21,6 +22,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
 
     syncPreferences();
+
+    if (localStorage.getItem('token')) {
+      fetchUserSettings()
+        .then(({ preferences }) => {
+          applyThemePreference(preferences.theme);
+          setPreferencesVersion((current) => current + 1);
+        })
+        .catch((error) => {
+          console.error('Load user settings error:', error);
+        });
+    }
 
     window.addEventListener(PREFERENCES_EVENT, syncPreferences as EventListener);
     window.addEventListener('storage', syncPreferences);

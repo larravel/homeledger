@@ -61,6 +61,11 @@ export function saveStoredPreferences(preferences: AppPreferences) {
   window.dispatchEvent(new CustomEvent(PREFERENCES_EVENT));
 }
 
+export function publishPreferencesUpdated() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(PREFERENCES_EVENT));
+}
+
 export function applyThemePreference(theme: AppPreferences['theme']) {
   if (typeof document === 'undefined' || typeof window === 'undefined') return;
 
