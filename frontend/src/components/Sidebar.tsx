@@ -14,22 +14,6 @@ import {
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
 
-  const linkStyle = ({ isActive }: { isActive: boolean }) => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '11px 14px',
-    borderRadius: '15px',
-    textDecoration: 'none',
-    color: 'rgba(255,255,255,0.92)',
-    background: isActive
-      ? 'linear-gradient(90deg, rgba(18,34,77,1), rgba(32,73,164,0.96))'
-      : 'transparent',
-    fontWeight: 600,
-    fontSize: '0.92rem',
-    boxShadow: isActive ? '0 16px 30px rgba(8, 18, 44, 0.42)' : 'none',
-  });
-
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="brand">
@@ -53,37 +37,58 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
-        <NavLink to="/dashboard" style={linkStyle}>
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+        >
           <Home size={18} />
           {!collapsed && 'Dashboard'}
         </NavLink>
 
-        <NavLink to="/bills" style={linkStyle}>
+        <NavLink
+          to="/bills"
+          className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+        >
           <Receipt size={18} />
           {!collapsed && 'Bills'}
         </NavLink>
 
-        <NavLink to="/payments" style={linkStyle}>
+        <NavLink
+          to="/payments"
+          className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+        >
           <Wallet size={18} />
           {!collapsed && 'Payment History'}
         </NavLink>
 
-        <NavLink to="/recurring-bills" style={linkStyle}>
+        <NavLink
+          to="/recurring-bills"
+          className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+        >
           <CalendarSync size={18} />
           {!collapsed && 'Recurring Bills'}
         </NavLink>
 
-        <NavLink to="/expenses" style={linkStyle}>
+        <NavLink
+          to="/expenses"
+          className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+        >
           <HandCoins size={18} />
           {!collapsed && 'Expenses'}
         </NavLink>
 
-        <NavLink to="/budgeting" style={linkStyle}>
+        <NavLink
+          to="/budgeting"
+          className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+        >
           <ChartColumnIncreasing size={18} />
           {!collapsed && 'Budgeting'}
         </NavLink>
 
-        <NavLink to="/settings" style={linkStyle}>
+        <NavLink
+          to="/settings"
+          className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+        >
           <Settings2 size={18} />
           {!collapsed && 'Settings'}
         </NavLink>
