@@ -98,11 +98,22 @@ export class AuthService {
   }
 
   async changePassword(userId: number, currentPassword: string, newPassword: string) {
-    // Get user by ID from the repository
     const user = await this.usersService.findById(userId);
 
     if (!user) {
       throw new UnauthorizedException('User not found');
+    }
+
+    if (!currentPassword || !newPassword) {
+      throw new BadRequestException('Current and new passwords are required');
+    }
+
+    if (newPassword.length < 6) {
+      throw new BadRequestException('New password must be at least 6 characters');
+    }
+
+    if (currentPassword === newPassword) {
+      throw new BadRequestException('New password must be different from the current password');
     }
 
     const passwordMatched = await bcrypt.compare(currentPassword, user.password);
@@ -116,6 +127,20 @@ export class AuthService {
 
     return {
       message: 'Password updated successfully',
+    };
+  }
+
+  async deleteAccount(userId: number) {
+    const user = await this.usersService.findById(userId);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    await this.usersService.deleteAccount(userId);
+
+    return {
+      message: 'Account deleted successfully',
     };
   }
 }

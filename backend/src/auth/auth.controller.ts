@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Patch,
   Post,
@@ -87,5 +88,12 @@ export class AuthController {
       changePasswordDto.current,
       changePasswordDto.new,
     );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('profile')
+  deleteAccount(@Req() req: Request) {
+    const user = req.user as { userId: number; email: string };
+    return this.authService.deleteAccount(user.userId);
   }
 }

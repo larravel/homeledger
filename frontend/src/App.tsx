@@ -5,7 +5,7 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import BillsPage from './pages/BillsPage';
 import PaymentHistoryPage from './pages/PaymentHistoryPage';
-import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
 import ExpensesPage from './pages/ExpensesPage'; // ✅ ADD THIS
 import RecurringBillsPage from './pages/RecurringBillsPage'; // ✅ ADD THIS
 import BudgetingPage from './pages/Budgeting'; // ✅ ADD THIS
@@ -58,7 +58,7 @@ export default function App() {
         path="/settings"
         element={
           <ProtectedRoute>
-            <ProfilePage />
+            <SettingsPage />
           </ProtectedRoute>
         }
       />
