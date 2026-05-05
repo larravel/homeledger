@@ -100,16 +100,6 @@ export function getSmartItemVisual({
     return { type: 'icon', icon: createElement(Droplets, { size: 16 }) };
   }
   if (
-    source.includes('electric') ||
-    source.includes('power') ||
-    source.includes('energy') ||
-    source.includes('meralco') ||
-    source.includes('utility') ||
-    source.includes('utilities')
-  ) {
-    return { type: 'icon', icon: createElement(PlugZap, { size: 16 }) };
-  }
-  if (
     source.includes('internet') ||
     source.includes('wifi') ||
     source.includes('fiber') ||
@@ -118,6 +108,16 @@ export function getSmartItemVisual({
     source.includes('globe')
   ) {
     return { type: 'icon', icon: createElement(Wifi, { size: 16 }) };
+  }
+  if (
+    source.includes('electric') ||
+    source.includes('power') ||
+    source.includes('energy') ||
+    source.includes('meralco') ||
+    source.includes('utility') ||
+    source.includes('utilities')
+  ) {
+    return { type: 'icon', icon: createElement(PlugZap, { size: 16 }) };
   }
   if (
     source.includes('mobile') ||

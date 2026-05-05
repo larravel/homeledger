@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Coins, CreditCard, Landmark, Search, ShieldAlert } from 'lucide-react';
+import { Coins, CreditCard, Landmark, Search, ShieldAlert, Sparkles } from 'lucide-react';
 import AppLayout from '../layouts/AppLayout';
 import api from '../services/api';
 import '../styles/payment-history.css';
@@ -148,7 +148,7 @@ export default function PaymentHistoryPage() {
         <div className="dashboard-screen-header">
           <div>
             <h1>Payment History</h1>
-            <p>Review completed payments, late fees, and monthly spending activity.</p>
+            <p>Review settled bills, payment timing, and monthly totals.</p>
           </div>
         </div>
 
@@ -196,11 +196,15 @@ export default function PaymentHistoryPage() {
 
         <section className="dashboard-panel">
           <div className="dashboard-panel-headline">
-            <div>
-              <h2>Transaction Ledger</h2>
-              <p className="bills-panel-copy">
-                Filter and review every settled bill in a cleaner monthly view.
-              </p>
+              <div>
+                <h2>Transaction Ledger</h2>
+                <p className="bills-panel-copy">
+                  Filter and review every settled bill in one monthly ledger.
+                </p>
+              </div>
+            <div className="payments-list-meta">
+              <Sparkles size={16} />
+              Settled payment log
             </div>
           </div>
 

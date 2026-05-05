@@ -672,8 +672,15 @@ export default function RecurringBillsPage() {
 
                 return (
                   <div key={item.category} className="recurring-mix-card">
-                    <div className="recurring-mix-label">{item.label}</div>
-                    <div className="recurring-mix-value">{formatCurrency(item.amount)}</div>
+                    <div className="recurring-mix-head">
+                      <div className="recurring-mix-icon">
+                        <SmartItemAvatar category={item.category} description={item.label} />
+                      </div>
+                      <div>
+                        <div className="recurring-mix-label">{item.label}</div>
+                        <div className="recurring-mix-value">{formatCurrency(item.amount)}</div>
+                      </div>
+                    </div>
                     <div className="recurring-mix-track">
                       <span
                         className="recurring-mix-fill"

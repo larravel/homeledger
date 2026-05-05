@@ -22,6 +22,19 @@
   padding-left: 38px;
 }
 
+.payments-list-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #f8fbff;
+  border: 1px solid #e6edf7;
+}
+
 .payments-ledger {
   display: grid;
   gap: 22px;
@@ -172,4 +185,40 @@
   .payments-item-meta {
     justify-items: start;
   }
+}
+
+body[data-theme='dark'] .payments-item-shell {
+  background: linear-gradient(180deg, #111a2d, #0f1728);
+  border-color: #24324d;
+  box-shadow: none;
+}
+
+body[data-theme='dark'] .payments-list-meta {
+  background: linear-gradient(180deg, #111a2d, #0f1728);
+  border-color: #24324d;
+  color: #9fb0c7;
+}
+
+body[data-theme='dark'] .payments-month-header {
+  border-color: #24324d;
+}
+
+body[data-theme='dark'] .payments-month-header strong,
+body[data-theme='dark'] .payments-month-total strong,
+body[data-theme='dark'] .payments-item-main strong,
+body[data-theme='dark'] .payments-item-amount strong {
+  color: #e5edf8;
+}
+
+body[data-theme='dark'] .payments-month-header small,
+body[data-theme='dark'] .payments-month-total small,
+body[data-theme='dark'] .payments-item-main small,
+body[data-theme='dark'] .payments-item-amount span,
+body[data-theme='dark'] .payments-search-wrap svg {
+  color: #9fb0c7;
+}
+
+body[data-theme='dark'] .payments-item-date-label {
+  background: #18243d;
+  color: #d7e2f2;
 }

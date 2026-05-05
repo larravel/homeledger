@@ -5,6 +5,8 @@ import {
   HandCoins,
   PencilLine,
   Receipt,
+  Search,
+  Sparkles,
   Trash2,
 } from 'lucide-react';
 import AppLayout from '../layouts/AppLayout';
@@ -280,7 +282,7 @@ export default function BillsPage() {
         <div className="dashboard-screen-header">
           <div>
             <h1>Bills</h1>
-            <p>Track due dates, manage obligations, and pay bills on time.</p>
+            <p>Track bills, due dates, and what still needs to be paid.</p>
           </div>
         </div>
 
@@ -332,7 +334,7 @@ export default function BillsPage() {
               <div>
                 <h2>{editingId ? 'Edit Bill' : 'Add New Bill'}</h2>
                 <p className="bills-panel-copy">
-                  Keep your bill list current so due dates, budgets, and payment history stay aligned.
+                  Add a bill and keep your payment schedule up to date.
                 </p>
               </div>
             </div>
@@ -427,19 +429,21 @@ export default function BillsPage() {
               <div>
                 <h2>Billing Snapshot</h2>
                 <p className="bills-panel-copy">
-                  A quick look at your leading bill category and what is coming up next.
+                  A quick view of your biggest bill group and what is due next.
                 </p>
               </div>
             </div>
 
             <div className="bills-snapshot-stack">
-              <div className="bills-snapshot-card">
-                <span>Largest Category</span>
-                <strong>{categoryBreakdown[0]?.label || 'No data yet'}</strong>
-              </div>
-              <div className="bills-snapshot-card">
-                <span>Largest Category Amount</span>
-                <strong>{formatCurrency(categoryBreakdown[0]?.amount || 0)}</strong>
+              <div className="bills-summary-board">
+                <div className="bills-summary-card">
+                  <span>Largest category</span>
+                  <strong>{categoryBreakdown[0]?.label || 'No data yet'}</strong>
+                </div>
+                <div className="bills-summary-card">
+                  <span>Largest category amount</span>
+                  <strong>{formatCurrency(categoryBreakdown[0]?.amount || 0)}</strong>
+                </div>
               </div>
 
               <div className="bills-upcoming-block">
@@ -485,24 +489,31 @@ export default function BillsPage() {
 
         <section className="dashboard-panel">
           <div className="dashboard-panel-headline">
-            <div>
-              <h2>Bill History</h2>
-              <p className="bills-panel-copy">
-                Showing {filteredBills.length} bill{filteredBills.length === 1 ? '' : 's'} in the current view.
-              </p>
+              <div>
+                <h2>Bill History</h2>
+                <p className="bills-panel-copy">
+                  Showing {filteredBills.length} bill{filteredBills.length === 1 ? '' : 's'} in this view.
+                </p>
+              </div>
+            <div className="bills-list-meta">
+              <Sparkles size={16} />
+              Billing activity log
             </div>
           </div>
 
           <div className="bills-toolbar">
             <label className="bills-filter">
               <span>Search</span>
-              <input
-                className="input"
-                type="text"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Bill name or provider"
-              />
+              <div className="bills-search-wrap">
+                <Search size={16} />
+                <input
+                  className="input"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Bill name or provider"
+                />
+              </div>
             </label>
 
             <label className="bills-filter">
@@ -589,7 +600,9 @@ export default function BillsPage() {
                             </div>
                           </div>
                         </td>
-                        <td>{getCategoryLabel(bill.category)}</td>
+                        <td>
+                          <span className="bills-category-pill">{getCategoryLabel(bill.category)}</span>
+                        </td>
                         <td>{formatDate(bill.dueDate)}</td>
                         <td className="bills-amount-cell">{formatCurrency(bill.amount)}</td>
                         <td>
