@@ -30,6 +30,7 @@ import '../styles/dashboard-page.css';
 import { formatCurrency } from '../utils/format';
 import { SmartItemAvatar } from '../utils/itemVisual';
 import { formatDateByPreference } from '../utils/preferences';
+import { fetchUserSettings, getCachedBudgets } from '../utils/settings';
 
 interface Bill {
   id: number;
@@ -148,14 +149,20 @@ export default function DashboardPage() {
         setBills([]);
         setExpenses([]);
         setUpcoming([]);
+      }
+
+      try {
+        const settings = await fetchUserSettings();
+        setBudgets(settings.budgets);
+      } catch (error) {
+        console.error('Load dashboard settings error:', error);
+        setBudgets(getCachedBudgets());
       } finally {
         setLoading(false);
       }
     }
 
     loadPage();
-    const savedBudgets = localStorage.getItem('budgets');
-    setBudgets(savedBudgets ? safeParseBudgets(savedBudgets) : []);
   }, []);
 
   useEffect(() => {
@@ -187,12 +194,16 @@ export default function DashboardPage() {
 
   useEffect(() => {
     function syncBudgets() {
-      const savedBudgets = localStorage.getItem('budgets');
-      setBudgets(savedBudgets ? safeParseBudgets(savedBudgets) : []);
+      setBudgets(getCachedBudgets());
     }
 
     window.addEventListener('storage', syncBudgets);
-    return () => window.removeEventListener('storage', syncBudgets);
+    window.addEventListener('homeledger:budgets-updated', syncBudgets);
+
+    return () => {
+      window.removeEventListener('storage', syncBudgets);
+      window.removeEventListener('homeledger:budgets-updated', syncBudgets);
+    };
   }, []);
 
   function formatDate(date: string) {
@@ -943,15 +954,6 @@ function safeParseUser(value: string) {
     return JSON.parse(value) as Record<string, string>;
   } catch {
     return null;
-  }
-}
-
-function safeParseBudgets(value: string) {
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
   }
 }
 

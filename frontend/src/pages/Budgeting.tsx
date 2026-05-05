@@ -14,6 +14,12 @@ import api from '../services/api';
 import '../styles/budgeting-page.css';
 import { formatCurrency } from '../utils/format';
 import { SmartItemAvatar } from '../utils/itemVisual';
+import {
+  fetchUserSettings,
+  getCachedBudgets,
+  saveUserBudgets,
+  type Budget,
+} from '../utils/settings';
 
 interface Expense {
   id: number;
@@ -30,11 +36,6 @@ interface Bill {
   dueDate: string;
   description: string;
   status: string;
-}
-
-interface Budget {
-  category: string;
-  limit: number;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -125,11 +126,17 @@ export default function BudgetingPage() {
 
       setExpenses(expensesData);
       setBills(billsData);
-      loadBudgets();
     } catch (error) {
       console.error('Fetch budgeting data error:', error);
       setExpenses([]);
       setBills([]);
+    }
+
+    try {
+      const settings = await fetchUserSettings();
+      setBudgets(settings.budgets);
+    } catch (error) {
+      console.error('Fetch budget settings error:', error);
       loadBudgets();
     } finally {
       setLoading(false);
@@ -141,28 +148,22 @@ export default function BudgetingPage() {
   }, []);
 
   function loadBudgets() {
-    const saved = localStorage.getItem('budgets');
-    if (!saved) {
-      setBudgets([]);
-      return;
-    }
-
-    const parsed = JSON.parse(saved) as Budget[];
-    setBudgets(
-      parsed.map((budget) => ({
-        ...budget,
-        category: normalizeBudgetCategory(budget.category),
-      })),
-    );
+    setBudgets(getCachedBudgets());
   }
 
-  function saveBudgets(nextBudgets: Budget[]) {
+  async function saveBudgets(nextBudgets: Budget[]) {
     const normalizedBudgets = nextBudgets.map((budget) => ({
       ...budget,
       category: normalizeBudgetCategory(budget.category),
     }));
     setBudgets(normalizedBudgets);
-    localStorage.setItem('budgets', JSON.stringify(normalizedBudgets));
+    try {
+      const savedBudgets = await saveUserBudgets(normalizedBudgets);
+      setBudgets(savedBudgets);
+    } catch (error) {
+      console.error('Sync budgets to database error:', error);
+      throw error;
+    }
   }
 
   function handleChange(
@@ -173,25 +174,30 @@ export default function BudgetingPage() {
 
   const isValid = form.category && Number(form.limit) > 0;
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!isValid) return;
 
     setSubmitting(true);
-    const normalizedCategory = normalizeBudgetCategory(form.category);
+    try {
+      const normalizedCategory = normalizeBudgetCategory(form.category);
 
-    const nextBudgets = budgets.some((budget) => budget.category === normalizedCategory)
-      ? budgets.map((budget) =>
-          budget.category === normalizedCategory
-            ? { ...budget, limit: Number(form.limit) }
-            : budget,
-        )
-      : [...budgets, { category: normalizedCategory, limit: Number(form.limit) }];
+      const nextBudgets = budgets.some((budget) => budget.category === normalizedCategory)
+        ? budgets.map((budget) =>
+            budget.category === normalizedCategory
+              ? { ...budget, limit: Number(form.limit) }
+              : budget,
+          )
+        : [...budgets, { category: normalizedCategory, limit: Number(form.limit) }];
 
-    saveBudgets(nextBudgets);
-    setForm({ category: '', limit: '' });
-    setEditingCategory(null);
-    setSubmitting(false);
+      await saveBudgets(nextBudgets);
+      setForm({ category: '', limit: '' });
+      setEditingCategory(null);
+    } catch (error) {
+      console.error('Save budget error:', error);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function handleEditBudget(category: string) {
@@ -202,7 +208,7 @@ export default function BudgetingPage() {
     setForm({ category, limit: budget.limit.toString() });
   }
 
-  function handleDeleteBudget(category: string) {
+  async function handleDeleteBudget(category: string) {
     const budget = budgets.find((item) => item.category === category);
     const label = budget ? CATEGORY_LABELS[budget.category] || budget.category : category;
 
@@ -211,11 +217,18 @@ export default function BudgetingPage() {
     }
 
     const nextBudgets = budgets.filter((budget) => budget.category !== category);
-    saveBudgets(nextBudgets);
+    setSubmitting(true);
+    try {
+      await saveBudgets(nextBudgets);
 
-    if (editingCategory === category) {
-      setEditingCategory(null);
-      setForm({ category: '', limit: '' });
+      if (editingCategory === category) {
+        setEditingCategory(null);
+        setForm({ category: '', limit: '' });
+      }
+    } catch (error) {
+      console.error('Delete budget error:', error);
+    } finally {
+      setSubmitting(false);
     }
   }
 
