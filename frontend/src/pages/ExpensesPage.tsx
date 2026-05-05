@@ -243,7 +243,7 @@ export default function ExpensesPage() {
         <div className="dashboard-screen-header">
           <div>
             <h1>Expenses</h1>
-            <p>Track daily spending, monitor category trends, and keep your cash flow organized.</p>
+            <p>Track spending, review categories, and keep your records organized.</p>
           </div>
         </div>
 
@@ -297,7 +297,7 @@ export default function ExpensesPage() {
               <div>
                 <h2>{editingId ? 'Edit Expense' : 'Add New Expense'}</h2>
                 <p className="bills-panel-copy">
-                  Log spending quickly so your reports and category totals stay accurate.
+                  Add an expense and keep your category totals accurate.
                 </p>
               </div>
             </div>
@@ -382,7 +382,7 @@ export default function ExpensesPage() {
               <div>
                 <h2>Spending Snapshot</h2>
                 <p className="bills-panel-copy">
-                  A quick read on where your expense activity is concentrated.
+                  A quick view of your total spend and leading category.
                 </p>
               </div>
             </div>
@@ -438,13 +438,13 @@ export default function ExpensesPage() {
 
         <section className="dashboard-panel">
           <div className="dashboard-panel-headline">
-            <div>
-              <h2>Expense by Category</h2>
-              <p className="bills-panel-copy">
-                Review which categories are taking the biggest share of your spending.
-              </p>
+              <div>
+                <h2>Expense by Category</h2>
+                <p className="bills-panel-copy">
+                  See which categories take the biggest share of spending.
+                </p>
+              </div>
             </div>
-          </div>
 
           {categoryBreakdown.length === 0 ? (
             <div className="dashboard-empty-state compact">
@@ -485,12 +485,12 @@ export default function ExpensesPage() {
 
         <section className="dashboard-panel">
           <div className="dashboard-panel-headline">
-            <div>
-              <h2>Expense History</h2>
-              <p className="bills-panel-copy">
-                Showing {filteredExpenses.length} expense{filteredExpenses.length === 1 ? '' : 's'} in the current view.
-              </p>
-            </div>
+              <div>
+                <h2>Expense History</h2>
+                <p className="bills-panel-copy">
+                  Showing {filteredExpenses.length} expense{filteredExpenses.length === 1 ? '' : 's'} in this view.
+                </p>
+              </div>
             <div className="expenses-list-meta">
               <Sparkles size={16} />
               Spending activity log

@@ -174,3 +174,28 @@
     grid-template-columns: 1fr;
   }
 }
+
+body[data-theme='dark'] .expenses-summary-card,
+body[data-theme='dark'] .expenses-category-card,
+body[data-theme='dark'] .expenses-list-meta {
+  background: linear-gradient(180deg, #111a2d, #0f1728);
+  border-color: #24324d;
+  box-shadow: none;
+}
+
+body[data-theme='dark'] .expenses-summary-card span,
+body[data-theme='dark'] .expenses-category-label,
+body[data-theme='dark'] .expenses-category-share,
+body[data-theme='dark'] .expenses-list-meta,
+body[data-theme='dark'] .expenses-search-wrap svg {
+  color: #9fb0c7;
+}
+
+body[data-theme='dark'] .expenses-summary-card strong,
+body[data-theme='dark'] .expenses-category-value {
+  color: #e5edf8;
+}
+
+body[data-theme='dark'] .expenses-category-track {
+  background: #22314b;
+}
