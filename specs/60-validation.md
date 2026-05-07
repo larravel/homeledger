@@ -1,23 +1,15 @@
 # Validation Evidence
 
-Validated on: 2026-05-03
+Validated on: 2026-05-07
 
 ## Commands Run
-
-### Frontend typecheck
-
-```powershell
-cd frontend
-npx tsc --noEmit --project tsconfig.app.json
-```
-
-Result: Passed
 
 ### Backend build
 
 ```powershell
 cd backend
-npm run build
+$env:NODE_OPTIONS='--max-old-space-size=4096'
+npm.cmd run build
 ```
 
 Result: Passed
@@ -26,7 +18,17 @@ Result: Passed
 
 ```powershell
 cd backend
-npm test -- --runInBand
+npm.cmd test -- --runInBand
+```
+
+Result: Passed
+
+### Frontend production build
+
+```powershell
+cd frontend
+$env:NODE_OPTIONS='--max-old-space-size=4096'
+npm.cmd run build
 ```
 
 Result: Passed
@@ -34,4 +36,6 @@ Result: Passed
 ## Notes
 
 - The recurring bills controller and service specs were updated to use mocked dependencies so the backend test suite is now reviewable and repeatable.
+- Frontend and backend builds were run sequentially with `NODE_OPTIONS=--max-old-space-size=4096` to avoid local Node memory limits during compilation.
+- The frontend build completed with Vite's large chunk warning. This is a performance/code-splitting improvement note, not a failed build.
 - Validation evidence here is intentionally command-based so a reviewer can rerun it.

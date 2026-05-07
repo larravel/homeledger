@@ -16,6 +16,19 @@ These files document the final scope and reviewable evidence for the HomeLedger 
 - `60-validation.md` — repeatable validation commands and current status
 - `70-traceability.md` — requirement-to-code-to-validation mapping
 - `submission-reflection.md` — brief review/reflection including AI use
+- `80-settings-ui-polish.md` — accepted small-feature spec for the final Settings polish work
+
+## Feature Coverage
+
+The specs are organized by final scope rather than one separate file per page. The main app features are still covered through requirements, acceptance criteria, traceability, and validation evidence:
+
+- Dashboard
+- Bills
+- Payment History
+- Recurring Bills
+- Expenses
+- Budgeting
+- Settings
 
 ## Reviewer Note
 
